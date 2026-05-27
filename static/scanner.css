@@ -153,6 +153,8 @@ html, body {
 .upload-zone:hover, .upload-zone--dragover {
   background-color: #a6df88; /* Slightly darker container */
   transform: translateY(-2px);
+  border-color: #00ff00;
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.3), inset 0 0 15px rgba(0, 255, 0, 0.1);
 }
 
 .upload-zone__icon {
@@ -447,4 +449,106 @@ html, body {
   .history-columns {
     grid-template-columns: 1fr;
   }
+}
+
+/* SCANNING ANIMATION (For Uploaded Image) */
+.upload-preview-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 1.5rem;
+  display: none; /* hidden by default, JS toggles */
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.upload-preview-wrapper--active {
+  display: block;
+}
+
+.upload-preview-img {
+  width: 100%;
+  display: block;
+  max-height: 400px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+/* The actual scanning effect */
+.upload-scanner-laser {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #00ff00;
+  box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+  z-index: 10;
+  display: none;
+}
+
+.upload-scanner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(0, 255, 0, 0.2) 0%, transparent 10%);
+  pointer-events: none;
+  display: none;
+}
+
+/* Active scanning state */
+.is-scanning .upload-scanner-laser {
+  display: block;
+  animation: scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+
+.is-scanning .upload-scanner-overlay {
+  display: block;
+  animation: scan-overlay 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+
+.is-scanning .upload-preview-img {
+  opacity: 0.7; /* Dim slightly during scan */
+  filter: contrast(1.2) brightness(0.9);
+  transition: all 0.3s;
+}
+
+@keyframes scan {
+  0% { top: 0%; }
+  100% { top: 100%; }
+}
+
+@keyframes scan-overlay {
+  0% { transform: translateY(0%); }
+  100% { transform: translateY(100%); }
+}
+
+/* SVG Icons Styles */
+.svg-icon {
+  width: 1.5em;
+  height: 1.5em;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  vertical-align: middle;
+}
+
+.scanner-card__title .svg-icon {
+  color: var(--md-sys-color-primary);
+}
+
+.upload-zone__icon .svg-icon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--md-sys-color-primary);
+}
+
+.empty-state__icon .svg-icon {
+  width: 4rem;
+  height: 4rem;
+  opacity: 0.3;
 }

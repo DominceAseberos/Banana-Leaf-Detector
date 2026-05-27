@@ -35,17 +35,25 @@
       <!-- CARD 1: UPLOAD -->
       <section class="scanner-card">
         <h2 class="scanner-card__title">
-          <span>📤</span> Upload Image
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload Image
         </h2>
         <form id="uploadForm" novalidate style="display: flex; flex-direction: column; flex-grow: 1;">
           <div class="upload-zone" id="uploadZone">
-            <div class="upload-zone__icon">📸</div>
+            <div class="upload-zone__icon">
+              <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
             <p class="upload-zone__text">Click to upload or drag and drop</p>
             <p class="upload-zone__subtext">Supports: JPG, PNG, WEBP</p>
           </div>
           <!-- IMPORTANT: name="image" to match app.py -->
           <input type="file" id="imageInput" class="upload-input" name="image" accept="image/*">
-          <img id="preview" class="upload-preview" alt="Image preview">
+          
+          <div id="previewWrapper" class="upload-preview-wrapper">
+            <img id="preview" class="upload-preview-img" alt="Image preview">
+            <div class="upload-scanner-laser"></div>
+            <div class="upload-scanner-overlay"></div>
+          </div>
           
           <button type="submit" id="submitBtn" class="btn btn--primary">
             Analyze Leaf
@@ -53,21 +61,36 @@
         </form>
 
         <div class="progress-steps" id="progressSteps">
-          <div class="progress-steps__item" id="step1"><span>⬆️</span><span>Uploading image...</span></div>
-          <div class="progress-steps__item" id="step2"><span>🔍</span><span>Analyzing features...</span></div>
-          <div class="progress-steps__item" id="step3"><span>🤖</span><span>Running AI model...</span></div>
-          <div class="progress-steps__item" id="step4"><span>✅</span><span>Generating results...</span></div>
+          <div class="progress-steps__item" id="step1">
+            <svg class="svg-icon" style="width: 1.2em; height: 1.2em;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Uploading image...</span>
+          </div>
+          <div class="progress-steps__item" id="step2">
+            <svg class="svg-icon" style="width: 1.2em; height: 1.2em;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span>Analyzing features...</span>
+          </div>
+          <div class="progress-steps__item" id="step3">
+            <svg class="svg-icon" style="width: 1.2em; height: 1.2em;" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <span>Running AI model...</span>
+          </div>
+          <div class="progress-steps__item" id="step4">
+            <svg class="svg-icon" style="width: 1.2em; height: 1.2em;" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>Generating results...</span>
+          </div>
         </div>
       </section>
 
       <!-- CARD 2: RESULTS -->
       <section class="scanner-card results-container">
         <h2 class="scanner-card__title">
-          <span>🔬</span> Analysis Results
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 12h4l3-9 5 18 3-9h5"/></svg>
+          Analysis Results
         </h2>
         <div id="output" style="flex-grow: 1;">
           <div class="empty-state">
-            <div class="empty-state__icon">📊</div>
+            <div class="empty-state__icon">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
             <p>Upload an image to see analysis results</p>
           </div>
         </div>
@@ -77,7 +100,10 @@
 
     <!-- CARD 3: ANALYTICS -->
     <section class="scanner-card" style="margin-bottom: 2rem;">
-      <h2 class="scanner-card__title"><span>📈</span> Live Analytics</h2>
+      <h2 class="scanner-card__title">
+        <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Live Analytics
+      </h2>
       
       <div class="dashboard-grid">
         <div class="stat-card">
@@ -113,21 +139,36 @@
     <!-- CARD 4: HISTORY -->
     <section class="scanner-card">
       <div class="history-header">
-        <h2 class="scanner-card__title" style="margin: 0;"><span>📜</span> Analysis History</h2>
-        <button class="btn btn--secondary" onclick="clearHistory()" title="Clear History">🗑️ Clear</button>
+        <h2 class="scanner-card__title" style="margin: 0;">
+          <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Analysis History
+        </h2>
+        <button class="btn btn--secondary" onclick="clearHistory()" title="Clear History">
+          <svg class="svg-icon" style="width:1.2em; height:1.2em; margin-right:0.2rem;" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Clear
+        </button>
       </div>
       
       <div class="history-columns">
         <div class="history-col">
-          <h3 class="history-col__title history-col__title--accurate">✅ Accurate</h3>
+          <h3 class="history-col__title history-col__title--accurate">
+            <svg class="svg-icon" style="width:1.2em; height:1.2em; margin-right:0.2rem;" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Accurate
+          </h3>
           <div id="colAccurate" class="history-list"></div>
         </div>
         <div class="history-col">
-          <h3 class="history-col__title history-col__title--incorrect">❌ Incorrect</h3>
+          <h3 class="history-col__title history-col__title--incorrect">
+            <svg class="svg-icon" style="width:1.2em; height:1.2em; margin-right:0.2rem;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Incorrect
+          </h3>
           <div id="colIncorrect" class="history-list"></div>
         </div>
         <div class="history-col">
-          <h3 class="history-col__title history-col__title--corrected">🟠 Corrected</h3>
+          <h3 class="history-col__title history-col__title--corrected">
+            <svg class="svg-icon" style="width:1.2em; height:1.2em; margin-right:0.2rem;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Corrected
+          </h3>
           <div id="colCorrected" class="history-list"></div>
         </div>
       </div>
@@ -141,6 +182,7 @@
     const imageInput = document.getElementById('imageInput');
     const uploadZone = document.getElementById('uploadZone');
     const preview = document.getElementById('preview');
+    const previewWrapper = document.getElementById('previewWrapper');
     const output = document.getElementById('output');
     const progressSteps = document.getElementById('progressSteps');
     const submitBtn = document.getElementById('submitBtn');
@@ -189,7 +231,7 @@
         const reader = new FileReader();
         reader.onload = function (e) {
           preview.src = e.target.result;
-          preview.style.display = 'block';
+          previewWrapper.classList.add('upload-preview-wrapper--active');
         }
         reader.readAsDataURL(file);
       }
@@ -207,9 +249,10 @@
       // formData will automatically contain 'image' because input has name="image"
 
       // UI Reset
-      output.innerHTML = '<div class="empty-state"><div class="empty-state__icon">⏳</div><p>Processing...</p></div>';
+      output.innerHTML = '<div class="empty-state"><div class="empty-state__icon"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><p>Processing...</p></div>';
       progressSteps.style.display = 'block';
       submitBtn.disabled = true;
+      previewWrapper.classList.add('is-scanning');
 
       updateStep(1);
 
@@ -232,6 +275,7 @@
             document.querySelectorAll('.progress-steps__item').forEach(el => el.classList.remove('progress-steps__item--active'));
         }, 1000); 
         submitBtn.disabled = false;
+        previewWrapper.classList.remove('is-scanning');
 
         if (data.success) {
           currentServerFilename = data.filename;
@@ -242,6 +286,7 @@
       } catch (error) {
         console.error(error);
         submitBtn.disabled = false;
+        previewWrapper.classList.remove('is-scanning');
         output.innerHTML = `<div class="result-item" style="color:red">Network Error</div>`;
       }
     });
