@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banana Leaf Disease Detector | Scanner</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/scanner.css?v=2">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+  <!-- TOP NAV -->
+  <nav class="navbar">
+    <a href="/" class="navbar__link">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back to Home
+    </a>
+  </nav>
+
+  <!-- TOOL LAYOUT -->
+  <main class="scanner-layout">
+    <header class="scanner-header">
+      <h1 class="scanner-header__title">Banana Leaf Scanner</h1>
+      <p class="scanner-header__subtitle">AI-Powered Plant Health Analysis Tool</p>
+    </header>
+
+    <div class="scanner-grid">
+      
+      <!-- CARD 1: UPLOAD -->
+      <section class="scanner-card">
+        <h2 class="scanner-card__title">
+          <span>📤</span> Upload Image
+        </h2>
+        <form id="uploadForm" novalidate style="display: flex; flex-direction: column; flex-grow: 1;">
+          <div class="upload-zone" id="uploadZone">
+            <div class="upload-zone__icon">📸</div>
+            <p class="upload-zone__text">Click to upload or drag and drop</p>
+            <p class="upload-zone__subtext">Supports: JPG, PNG, WEBP</p>
+          </div>
+          <!-- IMPORTANT: name="image" to match app.py -->
+          <input type="file" id="imageInput" class="upload-input" name="image" accept="image/*">
+          <img id="preview" class="upload-preview" alt="Image preview">
+          
+          <button type="submit" id="submitBtn" class="btn btn--primary">
+            Analyze Leaf
+          </button>
+        </form>
+
+        <div class="progress-steps" id="progressSteps">
+          <div class="progress-steps__item" id="step1"><span>⬆️</span><span>Uploading image...</span></div>
+          <div class="progress-steps__item" id="step2"><span>🔍</span><span>Analyzing features...</span></div>
+          <div class="progress-steps__item" id="step3"><span>🤖</span><span>Running AI model...</span></div>
+          <div class="progress-steps__item" id="step4"><span>✅</span><span>Generating results...</span></div>
+        </div>
+      </section>
+
+      <!-- CARD 2: RESULTS -->
+      <section class="scanner-card results-container">
+        <h2 class="scanner-card__title">
+          <span>🔬</span> Analysis Results
+        </h2>
+        <div id="output" style="flex-grow: 1;">
+          <div class="empty-state">
+            <div class="empty-state__icon">📊</div>
+            <p>Upload an image to see analysis results</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- CARD 3: ANALYTICS -->
+    <section class="scanner-card" style="margin-bottom: 2rem;">
+      <h2 class="scanner-card__title"><span>📈</span> Live Analytics</h2>
+      
+      <div class="dashboard-grid">
+        <div class="stat-card">
+          <div class="stat-card__value" id="totalScans">0</div>
+          <div class="stat-card__label">Total Scans</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="accuracyRate">0%</div>
+          <div class="stat-card__label">Feedback Accuracy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card__value" id="topDisease">-</div>
+          <div class="stat-card__label">Most Common</div>
+        </div>
+      </div>
+
+      <div class="charts-wrapper">
+        <div class="chart-container">
+          <div class="chart-container__title">Disease Distribution</div>
+          <div style="height: 250px;">
+            <canvas id="diseaseChart"></canvas>
+          </div>
+        </div>
+        <div class="chart-container">
+          <div class="chart-container__title">Detection Timeline (30 Days)</div>
+          <div style="height: 250px;">
+            <canvas id="timelineChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD 4: HISTORY -->
+    <section class="scanner-card">
+      <div class="history-header">
+        <h2 class="scanner-card__title" style="margin: 0;"><span>📜</span> Analysis History</h2>
+        <button class="btn btn--secondary" onclick="clearHistory()" title="Clear History">🗑️ Clear</button>
+      </div>
+      
+      <div class="history-columns">
+        <div class="history-col">
+          <h3 class="history-col__title history-col__title--accurate">✅ Accurate</h3>
+          <div id="colAccurate" class="history-list"></div>
+        </div>
+        <div class="history-col">
+          <h3 class="history-col__title history-col__title--incorrect">❌ Incorrect</h3>
+          <div id="colIncorrect" class="history-list"></div>
+        </div>
+        <div class="history-col">
+          <h3 class="history-col__title history-col__title--corrected">🟠 Corrected</h3>
+          <div id="colCorrected" class="history-list"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Script Restored & Updated for new classes -->
+  <script>
+    const uploadForm = document.getElementById('uploadForm');
+    const imageInput = document.getElementById('imageInput');
+    const uploadZone = document.getElementById('uploadZone');
+    const preview = document.getElementById('preview');
+    const output = document.getElementById('output');
+    const progressSteps = document.getElementById('progressSteps');
+    const submitBtn = document.getElementById('submitBtn');
+
+    let currentServerFilename = null;
+    let historyData = [];
+
+    // Load history on start
+    loadHistory();
+
+    // Drag and Drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, () => uploadZone.classList.add('upload-zone--dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, () => uploadZone.classList.remove('upload-zone--dragover'), false);
+    });
+
+    uploadZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      handleFiles(files);
+    }
+
+    uploadZone.addEventListener('click', () => imageInput.click());
+    imageInput.addEventListener('change', () => handleFiles(imageInput.files));
+
+    function handleFiles(files) {
+      if (files.length > 0) {
+        const file = files[0];
+        // Assign to input for form submission
+        imageInput.files = files; // Essential for FormData
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!imageInput.files.length) {
+        alert("Please select a file first!");
+        return;
+      }
+
+      const formData = new FormData(uploadForm);
+      // formData will automatically contain 'image' because input has name="image"
+
+      // UI Reset
+      output.innerHTML = '<div class="empty-state"><div class="empty-state__icon">⏳</div><p>Processing...</p></div>';
+      progressSteps.style.display = 'block';
+      submitBtn.disabled = true;
+
+      updateStep(1);
+
+      try {
+        updateStep(2); // Mock progress for steps
+
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        updateStep(3);
+
+        const data = await response.json();
+
+        updateStep(4);
+        setTimeout(() => {
+            progressSteps.style.display = 'none';
+            // Reset steps
+            document.querySelectorAll('.progress-steps__item').forEach(el => el.classList.remove('progress-steps__item--active'));
+        }, 1000); 
+        submitBtn.disabled = false;
+
+        if (data.success) {
+          currentServerFilename = data.filename;
+          displayResult(data);
+        } else {
+          output.innerHTML = `<div class="result-item" style="color:red">Error: ${data.error}</div>`;
+        }
+      } catch (error) {
+        console.error(error);
+        submitBtn.disabled = false;
+        output.innerHTML = `<div class="result-item" style="color:red">Network Error</div>`;
+      }
+    });
+
+    function updateStep(stepNum) {
+      document.querySelectorAll('.progress-steps__item').forEach((el, index) => {
+        if (index + 1 === stepNum) el.classList.add('progress-steps__item--active');
+      });
+    }
+
+    function displayResult(data) {
+      const maxProb = Math.max(...Object.values(data.probabilities));
+      const color = maxProb > 80 ? 'var(--md-sys-color-success)' : (maxProb > 50 ? 'var(--md-sys-color-warning)' : 'var(--md-sys-color-error)');
+
+      // Generate secondary probabilities text
+      let othersHtml = '';
+      const others = Object.entries(data.probabilities)
+        .filter(([label, prob]) => label !== data.prediction && prob > 0)
+        .map(([label, prob]) => `${label}: ${prob}%`);
+
+      if (others.length > 0) {
+        othersHtml = `<p style="font-size:0.9em; opacity: 0.8; margin-top:5px;">Other possibilities: ${others.join(', ')}</p>`;
+      }
+
+      let html = `
+                <div style="background-color: var(--md-sys-color-surface-variant); padding: 1.5rem; border-radius: 16px;">
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Prediction: <span style="color:${color}">${data.prediction}</span></h3>
+                    <div style="width: 100%; height: 8px; background-color: rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
+                        <div style="height: 100%; width:${maxProb}%; background-color:${color}; transition: width 0.5s ease-out;"></div>
+                    </div>
+                    <p style="font-weight: 600;">Confidence: ${maxProb}%</p>
+                    ${othersHtml}
+                    ${data.explanation ? `<div style="margin-top:1rem; padding:1rem; background:rgba(255,255,255,0.5); border-radius:8px;"><small>${data.explanation}</small></div>` : ''}
+                    
+                    <!-- FEEDBACK SECTION -->
+                    <div class="feedback-box">
+                        <p class="feedback-box__title">Was this correct?</p>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn--primary feedback-btn" style="flex: 1" onclick="sendFeedback(true)">👍 Yes</button>
+                            <button class="btn btn--secondary feedback-btn" style="flex: 1" onclick="showCorrectionUI()">👎 No</button>
+                        </div>
+                        <div id="correctionUI" style="display:none; margin-top: 1rem;">
+                             <p style="margin-bottom: 0.5rem;">Please select correct label:</p>
+                             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn btn--secondary" onclick="submitCorrection('Healthy Leaf')">Healthy</button>
+                                <button class="btn btn--secondary" onclick="submitCorrection('Unhealthy leaf')">Unhealthy</button>
+                                <button class="btn btn--secondary" onclick="submitCorrection('Non-Leaf')">Non-Leaf</button>
+                             </div>
+                        </div>
+                        <p id="feedbackMessage" style="margin-top:10px; font-weight:bold;"></p>
+                    </div>
+                </div>
+            `;
+      output.innerHTML = html;
+    }
+
+    // GLOBAL FEEDBACK FUNCTIONS (Attached to window for inline onclick)
+    window.sendFeedback = function (isCorrect) {
+      submitFeedbackPaylod(isCorrect, null);
+    };
+
+    window.showCorrectionUI = function () {
+      document.getElementById('correctionUI').style.display = 'block';
+    };
+
+    window.submitCorrection = function (label) {
+      submitFeedbackPaylod(false, label);
+    };
+
+    async function submitFeedbackPaylod(isCorrect, actualLabel) {
+      if (!currentServerFilename) return;
+      const msgEl = document.getElementById('feedbackMessage');
+      msgEl.innerText = "Submitting feedback...";
+
+      const predEl = document.querySelector('h3 span');
+      const currentPred = predEl ? predEl.innerText : "unknown";
+
+      try {
+        const payload = {
+          filename: currentServerFilename,
+          prediction: currentPred,
+          correct: isCorrect,
+          actual_label: actualLabel
+        };
+
+        const res = await fetch('/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          msgEl.innerText = "Thanks! Model retrained successfully 🧠✅";
+          msgEl.style.color = "var(--md-sys-color-success)";
+          document.getElementById('correctionUI').style.display = 'none';
+          // Disable buttons
+          document.querySelectorAll('.feedback-btn').forEach(btn => btn.disabled = true);
+
+          // Reload History
+          setTimeout(loadHistory, 1000);
+
+        } else {
+          msgEl.innerText = "Error: " + data.error;
+          msgEl.style.color = "var(--md-sys-color-error)";
+        }
+      } catch (e) {
+        console.error(e);
+        msgEl.innerText = "Network error.";
+      }
+    }
+
+    // --- HISTORY FUNCTIONS ---
+    async function loadHistory() {
+      try {
+        const res = await fetch('/history');
+        historyData = await res.json();
+        renderHistory();
+      } catch (e) {
+        console.error("History load error", e);
+      }
+    }
+
+    async function clearHistory() {
+      if (!confirm("Are you sure you want to clear the history? This cannot be undone.")) return;
+
+      try {
+        const res = await fetch('/clear_history', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          historyData = [];
+          renderHistory();
+        } else {
+          alert("Failed to clear history: " + data.error);
+        }
+      } catch (e) {
+        alert("Network error");
+      }
+    }
+
+    function renderHistory() {
+      const colAccurate = document.getElementById('colAccurate');
+      const colIncorrect = document.getElementById('colIncorrect');
+      const colCorrected = document.getElementById('colCorrected');
+
+      // Clear columns
+      colAccurate.innerHTML = '';
+      colIncorrect.innerHTML = '';
+      colCorrected.innerHTML = '';
+
+      if (historyData.length === 0) {
+        colAccurate.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 1rem;">No history.</div>';
+        return;
+      }
+
+      historyData.forEach(item => {
+        const date = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const div = document.createElement('div');
+        div.className = 'history-entry';
+
+        // Image path (handle legacy items without unique filenames gracefully-ish, though they won't exist in static/uploads so onerror hides them)
+        const imgPath = `/static/uploads/${item.filename}`;
+
+        let listContent = `
+                <div style="display: flex; gap: 1rem; align-items: center; width: 100%;">
+                    <img src="${imgPath}" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;" onerror="this.style.display='none'">
+                    <div style="flex-grow: 1;">
+                        <div class="history-entry__pred">${item.prediction}</div>
+            `;
+
+        if (item.status === 'correct') {
+          // No additional content needed for 'correct'
+        } else if (item.status === 'corrected') {
+          listContent += `<div style="font-size: 0.8rem; color: var(--md-sys-color-warning);">corrected to <strong>${item.actual}</strong></div>`;
+        } else { // item.status === 'incorrect'
+          // No additional content needed for 'incorrect'
+        }
+        // Close h-info and h-layout once after conditional content
+        listContent += `</div><div class="history-entry__date">${date}</div></div>`;
+
+        div.innerHTML = listContent;
+
+        if (item.status === 'correct') {
+          colAccurate.appendChild(div);
+        } else if (item.status === 'corrected') {
+          colCorrected.appendChild(div);
+        } else { // item.status === 'incorrect'
+          colIncorrect.appendChild(div);
+        }
+      });
+    }
+
+    // --- ANALYTICS FUNCTIONS ---
+    async function loadAnalytics() {
+      try {
+        const res = await fetch('/api/analytics');
+        const response = await res.json();
+
+        if (!response.success) {
+          console.error("API Error:", response.error);
+          return;
+        }
+
+        const data = response.data;
+
+        // 1. Update Stats Cards
+        document.getElementById('totalScans').innerText = data.total_scans;
+
+        // Calculate Accuracy
+        const acc = data.accuracy;
+        const totalFeedback = acc.correct + acc.incorrect;
+        const accuracyRate = totalFeedback > 0 ? Math.round((acc.correct / totalFeedback) * 100) : 0;
+        document.getElementById('accuracyRate').innerText = accuracyRate + "%";
+
+        // Find Top Disease
+        let topDisease = "None";
+        let maxCount = 0;
+        for (const [disease, count] of Object.entries(data.disease_counts)) {
+          if (count > maxCount) {
+            maxCount = count;
+            topDisease = disease;
+          }
+        }
+        document.getElementById('topDisease').innerText = topDisease;
+
+
+        // 2. Render Charts
+        renderPieChart(data.disease_counts);
+        renderTimelineChart(data.timeline);
+
+      } catch (e) {
+        console.error("Fetch Error:", e);
+      }
+    }
+
+    function renderPieChart(counts) {
+      const ctx = document.getElementById('diseaseChart').getContext('2d');
+      const labels = Object.keys(counts);
+      const data = Object.values(counts);
+      
+      // Get the existing chart instance if it exists to destroy it before re-rendering
+      let chartStatus = Chart.getChart("diseaseChart"); 
+      if (chartStatus != undefined) {
+        chartStatus.destroy();
+      }
+
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: [
+              '#146c2e', // Healthy (Green)
+              '#ba1a1a', // Unhealthy (Red)
+              '#43483e', // Non-leaf (Gray)
+              '#984805', // Yellowish/Other
+              '#3498db'  // Blueish/Other
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right' }
+          }
+        }
+      });
+    }
+
+    function renderTimelineChart(timelineData) {
+      const ctx = document.getElementById('timelineChart').getContext('2d');
+
+      // Get the existing chart instance if it exists
+      let chartStatus = Chart.getChart("timelineChart"); 
+      if (chartStatus != undefined) {
+        chartStatus.destroy();
+      }
+
+      // Data is list of {date: '', count: N}
+      const labels = timelineData.map(d => d.date);
+      const counts = timelineData.map(d => d.count);
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Scans',
+            data: counts,
+            borderColor: '#386a20',
+            backgroundColor: 'rgba(56, 106, 32, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+          }
+        }
+      });
+    }
+
+    // Load analytics on start
+    loadAnalytics();
+  </script>
+</body>
+
+</html>

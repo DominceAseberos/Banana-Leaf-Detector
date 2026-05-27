@@ -185,6 +185,10 @@ def generate_explanation(probabilities, prediction):
 def index():
     return render_template("index.html")
 
+@app.route("/scanner")
+def scanner():
+    return render_template("scanner.html")
+
 @app.route("/healthz")
 def healthz():
     return {"ok": True}, 200
