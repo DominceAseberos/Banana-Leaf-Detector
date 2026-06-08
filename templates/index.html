@@ -39,7 +39,8 @@
       window.addEventListener('message', (e) => {
         if (!e.data || e.data.type !== 'UPDATE_STATE') return;
         if (e.data.payload.url && e.data.payload.url !== window.location.pathname) {
-          window.location.pathname = e.data.payload.url;
+          history.pushState(null, '', e.data.payload.url);
+          window.dispatchEvent(new PopStateEvent('popstate'));
           return;
         }
         if (e.data.payload.scrollPercentage !== undefined) {
