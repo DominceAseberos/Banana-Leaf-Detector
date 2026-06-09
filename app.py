@@ -15,13 +15,37 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 import uuid
-from firebase_helpers import (
-    init_firebase,
-    save_feature_to_firestore,
-    save_feedback_to_firestore,
-    get_feedback_history,
-    get_analytics_data,
-)
+
+try:
+    from firebase_helpers import (
+        init_firebase,
+        save_feature_to_firestore,
+        save_feedback_to_firestore,
+        get_feedback_history,
+        get_analytics_data,
+    )
+
+    FIREBASE_AVAILABLE = True
+except Exception:
+    FIREBASE_AVAILABLE = False
+    print("⚠️ Firebase not available. Using local fallback.")
+
+try:
+    from core.cnn.cnn_inference import (
+        load_model as load_cnn_model,
+        predict as cnn_predict,
+    )
+
+    CNN_AVAILABLE = True
+except Exception:
+    CNN_AVAILABLE = False
+    print("⚠️ CNN module not available.")
+
+    def load_cnn_model():
+        return None
+
+    def cnn_predict(model, path):
+        raise NotImplementedError("CNN not available")
 
 
 app = Flask(__name__)
@@ -51,7 +75,10 @@ MODEL_PATH = os.environ.get("MODEL_PATH", "models/knn_model.pkl")
 ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
 # Init Firebase
-db = init_firebase()
+if FIREBASE_AVAILABLE:
+    db = init_firebase()
+else:
+    db = None
 
 
 # ============================
@@ -71,6 +98,19 @@ except Exception as e:
     print(f"❌ Error loading model: {e}")
     # Initialize dummies to prevent immediate crash, though upload will fail
     knn, scaler, label_encoder = None, None, None
+
+# ============================
+# Load trained CNN model
+# ============================
+cnn_model = None
+if CNN_AVAILABLE:
+    try:
+        cnn_model = load_cnn_model()
+        print("✅ CNN model loaded successfully.")
+    except Exception as e:
+        print(
+            f"⚠️ CNN model not loaded: {e}. Train first: python -m core.cnn.cnn_trainer"
+        )
 
 
 def retrain_model():
@@ -276,6 +316,53 @@ def upload_image():
         print(f"Error processing image: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
     # No finally block -> Image persists
+
+
+@app.route("/upload/cnn", methods=["POST"])
+def upload_cnn():
+    if "image" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["image"]
+    if not file.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    ext = os.path.splitext(secure_filename(file.filename))[1].lower() or ".jpg"
+    if ext not in ALLOWED_EXTS:
+        return jsonify({"error": f"Unsupported file type: {ext}"}), 400
+
+    try:
+        unique_filename = f"{uuid.uuid4().hex}{ext}"
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
+        file.save(file_path)
+
+        result = cnn_predict(cnn_model, file_path)
+
+        prediction = result["prediction"]
+        prob_dict = result["probabilities"]
+        confidence = result["confidence"]
+
+        explanation_text = (
+            f"The CNN model is {confidence}% confident this is {prediction}. "
+            f"Probabilities: {', '.join(f'{k}: {v}%' for k, v in prob_dict.items())}"
+        )
+
+        print(f"CNN Image uploaded: {unique_filename} -> {prediction} | {prob_dict}")
+
+        return jsonify(
+            {
+                "success": True,
+                "prediction": prediction,
+                "confidence": confidence,
+                "probabilities": prob_dict,
+                "explanation": explanation_text,
+                "filename": unique_filename,
+            }
+        )
+
+    except Exception as e:
+        print(f"CNN Error processing image: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/feedback", methods=["POST"])
