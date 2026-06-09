@@ -47,12 +47,6 @@ except Exception:
     CNN_AVAILABLE = False
     print("⚠️ CNN module not available.")
 
-    def load_cnn_model():
-        return None
-
-    def cnn_predict(model, path):
-        raise NotImplementedError("CNN not available")
-
 
 app = Flask(__name__)
 CORS(app)
@@ -117,6 +111,16 @@ if CNN_AVAILABLE:
         print(
             f"⚠️ CNN model not loaded: {e}. Train first: python -m core.cnn.cnn_trainer"
         )
+
+
+def cnn_predict_safe(model, image_path):
+    if model is None or not CNN_AVAILABLE:
+        raise RuntimeError(
+            "CNN model is not available. "
+            "Download training data from the Google Drive link in dataset/README.md, "
+            "then run: python -m core.cnn.cnn_trainer"
+        )
+    return cnn_predict(model, image_path)
 
 
 def retrain_model():
@@ -342,7 +346,7 @@ def upload_cnn():
         file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
         file.save(file_path)
 
-        result = cnn_predict(cnn_model, file_path)
+        result = cnn_predict_safe(cnn_model, file_path)
 
         prediction = result["prediction"]
         prob_dict = result["probabilities"]
