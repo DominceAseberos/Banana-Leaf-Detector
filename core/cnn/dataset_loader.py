@@ -5,7 +5,7 @@ from torchvision import datasets, transforms
 from sklearn.model_selection import StratifiedShuffleSplit
 import numpy as np
 
-TRAIN_CLASS_MAP = {"Healthy Leaf": 0, "Diseased leaf": 1, "None-leaf": 2}
+TRAIN_CLASS_MAP = {"Healthy_leaf": 0, "Diseased_Leaf": 1, "Non_leaf": 2}
 OUTPUT_MAP = {0: "Healthy Leaf", 1: "Unhealthy Leaf", 2: "Non-Leaf"}
 
 train_transform = transforms.Compose(

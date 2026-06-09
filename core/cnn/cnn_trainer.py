@@ -77,18 +77,37 @@ def train(model, train_loader, val_loader, epochs=15, lr=0.001, device=None):
 if __name__ == "__main__":
     from core.cnn.dataset_loader import get_dataloaders
 
-    data_dir = os.path.join(
+    base_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
         "dataset",
         "train_data",
     )
 
-    if not os.path.exists(data_dir):
-        print(f"Training data not found at {data_dir}")
+    possible_paths = [
+        base_dir,
+        os.path.join(base_dir, "dataset", "raw_data"),
+        os.path.join(base_dir, "DATASET", "dataset", "raw_data"),
+    ]
+
+    data_dir = None
+    for p in possible_paths:
+        if os.path.exists(p):
+            data_dir = p
+            break
+
+    if data_dir is None:
+        print(f"Training data not found. Tried:")
+        for p in possible_paths:
+            print(f"  - {p}")
         print(
             "Download from: https://drive.google.com/drive/folders/1mng06d0Y_U4hC7WM5hnbBNbuC5ohulcq"
         )
+        print(
+            "Extract to dataset/train_data/ and ensure subfolders: Diseased_Leaf/, Healthy_leaf/, Non_leaf/"
+        )
         exit(1)
+
+    print(f"Using data directory: {data_dir}")
 
     train_loader, val_loader, class_names = get_dataloaders(data_dir, batch_size=32)
     print(f"Classes: {class_names}")
