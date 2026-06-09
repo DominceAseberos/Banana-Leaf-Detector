@@ -30,6 +30,12 @@ except Exception:
     FIREBASE_AVAILABLE = False
     print("⚠️ Firebase not available. Using local fallback.")
 
+from core.feedback_store import (
+    save_feedback as save_feedback_local,
+    get_feedback_history as get_feedback_history_local,
+    get_analytics_data as get_analytics_data_local,
+)
+
 try:
     from core.cnn.cnn_inference import (
         load_model as load_cnn_model,
@@ -372,36 +378,30 @@ def save_feedback():
         filename = data.get("filename", "unknown")
         prediction = data.get("prediction", "unknown")
         is_correct = data.get("correct", False)
-        # Fix: handle explicit None from frontend
+        model_type = data.get("model_type", "knn")
         actual_label = data.get("actual_label")
         if not actual_label and is_correct:
             actual_label = prediction
         elif not actual_label:
             actual_label = "Unknown"
 
-        # ACTIVE LEARNING LOGIC
-        if filename in FEATURE_CACHE:
-            features = FEATURE_CACHE[filename]
-
-            # Standardize label
-            label_map = {
-                "Healthy Leaf": "Healthy Leaf",
-                "Unhealthy Leaf": "Unhealthy leaf",
-                "Non-Leaf": "None-leaf",
-            }
-            standardized_label = label_map.get(actual_label, actual_label)
-
-            # Save to Firestore (Features)
-            success = save_feature_to_firestore(features, standardized_label, filename)
-
-            if success:
-                print(f"📝 Active Learning: Saved {standardized_label} to Firestore.")
-
-            # Clear cache
-            del FEATURE_CACHE[filename]
-
-        # Log to Firestore (Feedback)
-        save_feedback_to_firestore(filename, prediction, is_correct, actual_label)
+        if FIREBASE_AVAILABLE:
+            if filename in FEATURE_CACHE:
+                features = FEATURE_CACHE[filename]
+                label_map = {
+                    "Healthy Leaf": "Healthy Leaf",
+                    "Unhealthy Leaf": "Unhealthy leaf",
+                    "Non-Leaf": "None-leaf",
+                }
+                save_feature_to_firestore(
+                    features, label_map.get(actual_label, actual_label), filename
+                )
+                del FEATURE_CACHE[filename]
+            save_feedback_to_firestore(filename, prediction, is_correct, actual_label)
+        else:
+            save_feedback_local(
+                filename, prediction, is_correct, actual_label, model_type
+            )
 
         return jsonify({"success": True})
     except Exception as e:
@@ -412,7 +412,10 @@ def save_feedback():
 @app.route("/api/analytics")
 def analytics_api():
     try:
-        data = get_analytics_data(limit=1000)  # Fetch more for analytics
+        if FIREBASE_AVAILABLE:
+            data = get_analytics_data(limit=1000)
+        else:
+            data = get_analytics_data_local(limit=1000)
         return jsonify({"success": True, "data": data})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -420,8 +423,10 @@ def analytics_api():
 
 @app.route("/history", methods=["GET"])
 def get_history_route():
-    # Fetch from Firestore
-    history = get_feedback_history()
+    if FIREBASE_AVAILABLE:
+        history = get_feedback_history()
+    else:
+        history = get_feedback_history_local()
     return jsonify(history)
 
 

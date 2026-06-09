@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2026-06-10T07:04:06.823167",
+    "filename": "test.jpg",
+    "prediction": "Healthy Leaf",
+    "is_correct": true,
+    "actual_label": "Healthy Leaf",
+    "model_type": "knn"
+  },
+  {
+    "timestamp": "2026-06-10T07:04:06.824636",
+    "filename": "test2.jpg",
+    "prediction": "Unhealthy Leaf",
+    "is_correct": false,
+    "actual_label": "Healthy Leaf",
+    "model_type": "cnn"
+  }
+]
