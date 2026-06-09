@@ -1,116 +1,96 @@
-# 🍌 Banana Leaf Disease Detector & Active Learning System
+# Banana Leaf Disease Detector
 
-A smart machine learning web application that detects **Healthy**, **Unhealthy**, and **Non-Leaf** images. It features an **Active Learning** system that improves the model in real-time based on user feedback.
-
----
-
-## ✨ Key Features
-
-### 1. 🔍 Real-time Disease Detection
-*   Analyzes images using advanced feature extraction (**GLCM**, **LBP**, **HOG**, **Color Histograms**).
-*   Classifies leaves using a **K-Nearest Neighbors (KNN)** model.
-*   Provides detailed confidence scores and visual explanations.
-
-### 2. 🧠 Active Learning (On-the-Fly Training)
-*   **Learns from Mistakes:** If the model predicts incorrectly, you can provide the correct label.
-*   **Instant Retraining:** The system adds your feedback to the training dataset and immediately **retrains the model** in the background.
-*   **Continuous Improvement:** The more you use it, the smarter it gets!
-
-### 3. 📜 Visual Analysis History
-*   Keeps a persistent log of your recent scans.
-*   **Thumbnails:** Displays the analyzed images stored securely on the server.
-*   **Status Indicators:** Clearly shows if a prediction was accurate, incorrect, or corrected by you.
-*   **Management:** Includes a "Clear History" option to wipe the log.
+A dual-model web application that detects **Healthy Leaf**, **Unhealthy Leaf**, and **Non-Leaf** images using both KNN and CNN (ResNet18) classifiers.
 
 ---
 
-## 🛠️ Technology Stack
+## Features
 
-*   **Backend:** Python 3.12, Flask
-*   **Database:** Firebase Firestore (Features & Feedback Logging)
-*   **Machine Learning:** scikit-learn (KNN), NumPy, Pandas
-*   **Computer Vision:** OpenCV, scikit-image
-*   **Frontend:** HTML5, CSS3, JavaScript (Vanilla), Chart.js (Analytics)
-*   **Deployment:** Vercel / Render (Compatible)
+### Dual Model Architecture
+- **KNN Scanner** — Existing K-Nearest Neighbors classifier (59 features: GLCM, LBP, HOG, color histograms)
+- **CNN Scanner** — Deep learning classifier (ResNet18 transfer learning)
+
+### Active Learning
+- User feedback is logged locally (JSON) or to Firebase Firestore
+- Model improvement data collected for future retraining
+
+### Analytics Dashboard
+- Scan history with thumbnails
+- Disease distribution charts (Chart.js)
+- Accuracy tracking per model
 
 ---
 
-## 🚀 Installation & Usage
+## Technology Stack
 
-### 1. Clone the Repository
+- **Backend:** Python 3.12, Flask
+- **Database:** Firebase Firestore (optional) / Local JSON
+- **ML (KNN):** scikit-learn, NumPy, Pandas, OpenCV, scikit-image
+- **ML (CNN):** PyTorch, torchvision, ResNet18
+- **Frontend:** HTML5, CSS3, JavaScript, Chart.js
+- **Deployment:** Vercel / Render
+
+---
+
+## Project Structure
+
+```
+Banana-Leaf-Detector/
+├── app.py                     # Flask application with dual routes
+├── core/
+│   ├── knn/
+│   │   ├── extract_features.py   # 59-dim feature extraction
+│   │   ├── knn_trainer.py        # KNN training script
+│   │   └── __init__.py
+│   ├── cnn/
+│   │   ├── dataset_loader.py     # ImageFolder + transforms
+│   │   ├── model.py              # ResNet18 wrapper
+│   │   ├── cnn_trainer.py        # Training loop
+│   │   ├── cnn_inference.py      # Single-image prediction
+│   │   └── __init__.py
+│   ├── feedback_store.py         # Local JSON feedback storage
+│   └── __init__.py
+├── models/                   # Saved model files
+├── dataset/                  # Training & test images
+├── static/                   # CSS, JS, uploads
+├── templates/                # HTML views
+├── data.csv                  # KNN feature dataset
+└── requirements.txt          # Python dependencies
+```
+
+---
+
+## Installation
+
 ```bash
 git clone https://github.com/Domincee/Banana-Leaf-Detector.git
 cd Banana-Leaf-Detector
-```
-
-### 2. Set Up Environment
-It is recommended to use a virtual environment:
-```bash
-# Linux/Mac
 python3 -m venv venv
 source venv/bin/activate
-
-# Windows
-python -m venv venv
-.\venv\Scripts\Activate
-```
-
-### 3. Install Dependencies
-```bash
 pip install -r requirements.txt
-```
-
-### 4. Configure Firebase
-Ensure you have your `firebase_credentials.json` or set the `FIREBASE_CREDENTIALS` environment variable.
-
-### 5. Run the Application
-```bash
 python app.py
 ```
-The app will start at `http://127.0.0.1:5000`.
+
+Open `http://127.0.0.1:5000` and navigate between the **KNN Scanner** and **CNN Scanner** tabs.
 
 ---
 
-## 📂 Project Structure
+## Training the CNN Model
 
-```
-project/
-│
-├── app.py                  # Main Flask application & Active Learning logic
-├── firebase_helpers.py     # Firestore interaction (Features/Feedback)
-├── extract_features.py     # Feature extraction (Color, Texture, Shape)
-├── knn_trainer.py          # Initial model training script
-│
-├── dataset/                # Training images
-├── static/
-│   ├── uploads/            # Temporary storage for uploads
-│   └── styles.css          # UI Styling
-├── templates/
-│   └── index.html          # Frontend Interface
-│
-├── data.csv                # Initial Dataset
-├── knn_model.pkl           # Serialized trained model
-└── requirements.txt        # Python dependencies
+1. Download the training dataset from the [Google Drive link](https://drive.google.com/drive/folders/1mng06d0Y_U4hC7WM5hnbBNbuC5ohulcq)
+2. Extract to `dataset/train_data/` with folders: `Healthy Leaf/`, `Diseased leaf/`, `None-leaf/`
+3. Run the training script:
+   ```bash
+   python -m core.cnn.cnn_trainer
+   ```
+4. The trained model will be saved to `models/cnn_model.pth`
+
+## KNN Model Training
+
+```bash
+python -m core.knn.knn_trainer
 ```
 
----
+## License
 
-## 🧠 Model & Feature Details
-
-The system extracts **59 unique features** from each image:
-*   **Color (HSV, LAB, Grayscale):** Means, standard deviations, and hue histograms to detect discoloration.
-*   **Texture (GLCM, LBP):** Contrast, homogeneity, and local binary patterns to spot fungal textures.
-*   **Shape:** Area, perimeter, and circularity to distinguish leaves from other objects.
-*   **HOG (Histogram of Oriented Gradients):** Captures edge structures.
-
-**Active Learning Workflow:**
-1.  User uploads image -> Model predicts.
-2.  User gives "Thumbs Down" -> Selects correct label.
-3.  `app.py` saves extracted features + correct label to **Firebase Firestore**.
-4.  Feedback is logged for future model retraining.
-
----
-
-## 🪪 License
-
-© 2025 Domince Aseberos. Released under the **MIT License**.
+© 2025 Domince Aseberos. MIT License.

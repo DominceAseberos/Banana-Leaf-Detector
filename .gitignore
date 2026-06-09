@@ -7,6 +7,15 @@ dataset/
 
 uploads/
 
+# Ignore generated model files
+models/*.pkl
+models/*.pth
+
+# Ignore generated data files
+feedback_local.json
+
+*.csv
+
 # Ignore cache, logs, and system files
 __pycache__/
 *.log
@@ -15,5 +24,8 @@ __pycache__/
 
 # Ignore notebook checkpoints
 .ipynb_checkpoints/
+
+# Ignore generated images
+confusion_matrix.png
 
 .env
