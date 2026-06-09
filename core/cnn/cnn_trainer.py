@@ -77,16 +77,14 @@ def train(model, train_loader, val_loader, epochs=15, lr=0.001, device=None):
 if __name__ == "__main__":
     from core.cnn.dataset_loader import get_dataloaders
 
-    base_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "dataset",
-        "train_data",
+    project_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     )
 
     possible_paths = [
-        base_dir,
-        os.path.join(base_dir, "dataset", "raw_data"),
-        os.path.join(base_dir, "DATASET", "dataset", "raw_data"),
+        os.path.join(project_root, "raw_data"),
+        os.path.join(project_root, "dataset", "raw_data"),
+        os.path.join(project_root, "dataset", "train_data"),
     ]
 
     data_dir = None
