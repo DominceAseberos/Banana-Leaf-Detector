@@ -1,34 +1,22 @@
-from flask import Flask, request, jsonify, render_template
 import os
+import json
+import pickle
+import uuid
 from dotenv import load_dotenv
 
-# Load .env file (silent=True to avoid errors if .env is missing in production)
 load_dotenv()
-import pickle
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from sklearn.utils import resample
 from core.knn.extract_features import extract_features
-from flask_cors import CORS
 from werkzeug.utils import secure_filename
-import os
-import uuid
-
-try:
-    from firebase_helpers import (
-        init_firebase,
-        save_feature_to_firestore,
-        save_feedback_to_firestore,
-        get_feedback_history,
-        get_analytics_data,
-    )
-
-    FIREBASE_AVAILABLE = True
-except Exception:
-    FIREBASE_AVAILABLE = False
-    print("⚠️ Firebase not available. Using local fallback.")
+from fastapi import FastAPI, UploadFile, File, Request
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+import jinja2
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 from core.feedback_store import (
     save_feedback as save_feedback_local,
@@ -45,259 +33,187 @@ try:
     CNN_AVAILABLE = True
 except Exception:
     CNN_AVAILABLE = False
-    print("⚠️ CNN module not available.")
+    print("CNN module not available.")
 
+app = FastAPI(title="Banana Leaf Detector")
 
-app = Flask(__name__)
-CORS(app)
-
-# Config
-# Config
-app.config["MAX_CONTENT_LENGTH"] = (
-    int(os.environ.get("MAX_UPLOAD_MB", 10)) * 1024 * 1024
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-# Use /tmp for Vercel (or any read-only FS environment)
-UPLOAD_FOLDER = "/tmp" if os.environ.get("VERCEL") else "static/uploads"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+jinja_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader("templates"),
+    autoescape=True,
+)
+
+
+def render_template(name, **context):
+    template = jinja_env.get_template(name)
+    return HTMLResponse(template.render(context))
+
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+UPLOAD_FOLDER = "/tmp"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-FEEDBACK_FILE = "feedback.csv"
 DATA_CSV = "data.csv"
-
-# Check if running on Vercel
-IS_VERCEL = bool(os.environ.get("VERCEL"))
-
-# Global feature cache for active learning
 FEATURE_CACHE = {}
+MODEL_PATH = "models/knn_model.pkl"
+ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 
-MODEL_PATH = os.environ.get("MODEL_PATH", "models/knn_model.pkl")
+RECOMMENDATIONS = {
+    "Healthy Leaf": {
+        "title": "Keep Up the Good Work!",
+        "advice": "Your banana plant appears healthy. Continue regular care: adequate watering (avoid waterlogging), balanced fertilizer every 2-3 months, and maintain proper sunlight exposure.",
+        "actions": [
+            "Water regularly — keep soil moist but not waterlogged",
+            "Apply balanced NPK fertilizer (e.g., 14-14-14) every 2-3 months",
+            "Mulch around the base to retain moisture",
+            "Monitor weekly for early signs of pests or disease",
+        ],
+    },
+    "Unhealthy Leaf": {
+        "title": "Action Needed — Disease Detected",
+        "advice": "The leaf shows signs of disease. Common banana leaf diseases include Sigatoka leaf spot, Panama disease, or bacterial wilt. Early intervention is critical to prevent spread.",
+        "actions": [
+            "Prune and remove affected leaves immediately (sterilize tools)",
+            "Apply fungicide (e.g., Mancozeb or Copper-based) if fungal spots are visible",
+            "Improve air circulation — space plants adequately",
+            "Avoid overhead watering to reduce leaf wetness",
+            "Quarantine affected plant to prevent spread to neighboring plants",
+            "Consult local agricultural extension office for lab diagnosis",
+        ],
+    },
+    "Non-Leaf": {
+        "title": "Not a Banana Leaf",
+        "advice": "The uploaded image does not appear to be a banana leaf. This tool is designed to analyze banana leaf health.",
+        "actions": [
+            "Try uploading a clear photo of a banana leaf",
+            "Ensure the leaf fills most of the frame",
+            "Use good lighting without shadows",
+        ],
+    },
+}
 
-ALLOWED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
-# Init Firebase
-if FIREBASE_AVAILABLE:
-    db = init_firebase()
-else:
-    db = None
+def get_recommendation(prediction):
+    pred_lower = prediction.lower()
+    if "unhealthy" in pred_lower:
+        return RECOMMENDATIONS["Unhealthy Leaf"]
+    if "healthy" in pred_lower:
+        return RECOMMENDATIONS["Healthy Leaf"]
+    return RECOMMENDATIONS["Non-Leaf"]
 
 
-# ============================
-# Load trained KNN model
-# ============================
+from PIL import Image
+
+
+def _ensure_compat_format(file_path, ext):
+    if ext.lower() == ".webp":
+        png_path = file_path.rsplit(".", 1)[0] + ".png"
+        Image.open(file_path).save(png_path, "PNG")
+        os.remove(file_path)
+        return png_path, ".png"
+    return file_path, ext
+
+
+# Load KNN model
 try:
     with open(MODEL_PATH, "rb") as f:
         model_data = pickle.load(f)
-
-    knn = model_data["model"]  # trained KNN model
-    scaler = model_data["scaler"]  # MinMaxScaler
-    label_encoder_classes = model_data["classes"]  # class names
-
+    knn = model_data["model"]
+    scaler = model_data["scaler"]
+    label_encoder_classes = model_data["classes"]
     label_encoder = LabelEncoder()
     label_encoder.classes_ = np.array(label_encoder_classes)
 except Exception as e:
-    print(f"❌ Error loading model: {e}")
-    # Initialize dummies to prevent immediate crash, though upload will fail
+    print(f"Error loading KNN model: {e}")
     knn, scaler, label_encoder = None, None, None
 
-# ============================
-# Load trained CNN model
-# ============================
+# Load CNN model
 cnn_model = None
 if CNN_AVAILABLE:
     try:
         cnn_model = load_cnn_model()
-        print("✅ CNN model loaded successfully.")
+        print("CNN model loaded successfully.")
     except Exception as e:
-        print(
-            f"⚠️ CNN model not loaded: {e}. Train first: python -m core.cnn.cnn_trainer"
-        )
+        print(f"CNN model not loaded: {e}")
 
 
 def cnn_predict_safe(model, image_path):
     if model is None or not CNN_AVAILABLE:
-        raise RuntimeError(
-            "CNN model is not available. "
-            "Download training data from the Google Drive link in dataset/README.md, "
-            "then run: python -m core.cnn.cnn_trainer"
-        )
+        raise RuntimeError("CNN model is not available.")
     return cnn_predict(model, image_path)
 
 
-def retrain_model():
-    """
-    Retrains the KNN model using the updated data.csv.
-    This mimics the logic in knn_trainer.py but runs in-process.
-    """
-    global knn, scaler, label_encoder_classes, label_encoder
-
-    print("🔄 Retraining model with new data...")
-
-    if IS_VERCEL:
-        print("⚠️ Cannot retrain model on Vercel (Read-Only Filesystem). Skipping.")
-        return
-
-    if not os.path.exists(DATA_CSV):
-        print("❌ CSV file not found. Skipping retrain.")
-        return
-
-    df = pd.read_csv(DATA_CSV)
-
-    # Drop path/hash if they exist, keep only features + label
-    # The CSV structure is: path, label, hash, feat1, feat2...
-    # But wait, existing extract_features puts path/label/hash in first 3 cols.
-    # We must ensure we align with that.
-
-    # Standardize labels
-    df["label"] = df["label"].replace("Diseased leaf", "Unhealthy leaf")
-
-    # Balancing logic (Simple version: standardizing 'None-leaf' downsampling)
-    df_healthy = df[df["label"] == "Healthy Leaf"]
-    df_unhealthy = df[df["label"] == "Unhealthy leaf"]
-    df_none = df[
-        df["label"] == "None-leaf"
-    ]  # Or 'Non-leaf' depending on standardized name
-    # Fix potential label mismatch
-    df_none = df[df["label"].str.lower().str.contains("non")]
-
-    # If we have very few samples, skip complex balancing to avoid crashes
-    if len(df_healthy) < 5 or len(df_unhealthy) < 5:
-        print("⚠️ Not enough data to balance correctly. Training on raw data.")
-        df_balanced = df
-    else:
-        # Downsample majority (usually non-leaf) to match healthy count (or at least reasonable size)
-        target_count = max(len(df_healthy), len(df_unhealthy))
-        if len(df_none) > target_count:
-            df_none_down = resample(
-                df_none, replace=False, n_samples=target_count, random_state=42
-            )
-            df_balanced = pd.concat([df_healthy, df_unhealthy, df_none_down])
-        else:
-            df_balanced = pd.concat([df_healthy, df_unhealthy, df_none])
-
-    # Prepare X and y
-    # Features start from column 2 (indices 0=path, 1=label) in original CSV
-    # The structure is: path, label, feat1, feat2...
-
-    # Drop non-feature columns.
-    # We know features are numeric.
-    X = df_balanced.iloc[:, 2:].values  # Columns 2 onwards are features
-    y = df_balanced["label"].values
-
-    # Re-fit Label Encoder
-    le_new = LabelEncoder()
-    y_encoded = le_new.fit_transform(y)
-
-    # Re-fit Scaler
-    scaler_new = MinMaxScaler()
-    X_scaled = scaler_new.fit_transform(X)
-
-    # Train KNN (Best params from previous grid search: k=5, weights=distance usually)
-    # We'll stick to a robust default or what was loaded
-    knn_new = KNeighborsClassifier(n_neighbors=5, weights="distance", p=2)
-    knn_new.fit(X_scaled, y_encoded)
-
-    # Update Globals
-    knn = knn_new
-    scaler = scaler_new
-    label_encoder = le_new
-    label_encoder_classes = le_new.classes_
-    label_encoder.classes_ = np.array(label_encoder_classes)
-
-    # Save to disk
-    with open(MODEL_PATH, "wb") as f:
-        pickle.dump(
-            {"model": knn, "scaler": scaler, "classes": label_encoder_classes}, f
-        )
-
-    print("✅ Model successfully retrained and saved.")
-
-
 def generate_explanation(probabilities, prediction):
-    """
-    Generates a human-readable explanation based on confidence scores.
-    probabilities: dict { 'Healthy': 80, 'Unhealthy': 10, ... }
-    prediction: str (Key of the highest probability)
-    """
     sorted_probs = sorted(probabilities.items(), key=lambda x: x[1], reverse=True)
     top_label, top_score = sorted_probs[0]
     second_label, second_score = sorted_probs[1] if len(sorted_probs) > 1 else (None, 0)
-
     explanation = ""
-
-    # Confidence Logic
     if top_score >= 90:
-        explanation = f"The model is highly confident ({top_score}%) that this is {top_label}. The visual features (color density, texture patterns) match the standard profile for this category very closely."
+        explanation = (
+            f"The model is highly confident ({top_score}%) that this is {top_label}."
+        )
     elif top_score >= 70:
-        explanation = f"The model is fairly confident ({top_score}%) in the {top_label} classification. Most features align, though there might be slight variations in lighting or leaf texture."
+        explanation = f"The model is fairly confident ({top_score}%) in the {top_label} classification."
     elif top_score >= 50:
-        explanation = f"The analysis suggests {top_label} ({top_score}%), but there is some ambiguity. The model also detected similarities to {second_label} ({second_score}%). This often happens with early-stage disease or poor lighting."
+        explanation = f"The analysis suggests {top_label} ({top_score}%), but there is some ambiguity. The model also detected similarities to {second_label} ({second_score}%)."
     else:
-        explanation = f"The result is uncertain. While {top_label} was the top match ({top_score}%), the features are very mixed, showing strong similarities to {second_label} ({second_score}%). "
-
-    # Specific Edge Case Explanations
+        explanation = f"The result is uncertain. While {top_label} was the top match ({top_score}%), the features are very mixed."
     if "Unhealthy" in top_label:
         explanation += " Distinct discoloration or textural irregularities were detected on the leaf surface."
     elif "Healthy" in top_label and probabilities.get("Unhealthy", 0) > 20:
         explanation += " However, some small irregularities were noted, so keep an eye on the plant."
     elif "Non-Leaf" in top_label:
         explanation += " The image lacks the specific green/yellow color histograms and vein textures typically found in banana leaves."
-
     return explanation
 
 
 # ============================
 # Routes
 # ============================
-@app.route("/")
+@app.get("/")
 def index():
     return render_template("index.html")
 
 
-@app.route("/scanner")
+@app.get("/scanner")
 def scanner():
     return render_template("scanner.html")
 
 
-@app.route("/healthz")
+@app.get("/healthz")
 def healthz():
-    return {"ok": True}, 200
+    return {"ok": True}
 
 
-@app.route("/upload", methods=["POST"])
-def upload_image():
-    if "image" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-
-    file = request.files["image"]
-    if not file.filename:
-        return jsonify({"error": "No file selected"}), 400
-
-    ext = os.path.splitext(secure_filename(file.filename))[1].lower() or ".jpg"
+@app.post("/upload")
+async def upload_image(image: UploadFile = File(...)):
+    filename = image.filename or "image.jpg"
+    ext = os.path.splitext(secure_filename(filename))[1].lower() or ".jpg"
     if ext not in ALLOWED_EXTS:
-        return jsonify({"error": f"Unsupported file type: {ext}"}), 400
-
+        return JSONResponse({"error": f"Unsupported file type: {ext}"}, status_code=400)
     try:
-        # Generate unique filename for persistence
         unique_filename = f"{uuid.uuid4().hex}{ext}"
-        file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
-        file.save(file_path)
-
-        # Extract features and scale
+        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        contents = await image.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        file_path, ext = _ensure_compat_format(file_path, ext)
+        unique_filename = os.path.basename(file_path)
         features = extract_features(file_path)
-
-        # Cache features for active learning (feedback loop)
-        # Key by the unique filename now
         FEATURE_CACHE[unique_filename] = features
-
         features_scaled = scaler.transform(features.reshape(1, -1))
-
-        # Predict class
         pred_encoded = knn.predict(features_scaled)[0]
         pred_label = label_encoder.inverse_transform([pred_encoded])[0]
         if "Diseased" in pred_label:
             pred_label = pred_label.replace("Diseased", "Unhealthy")
-
-        # Predict probabilities (use knn.classes_ for correct order)
         prob_array = knn.predict_proba(features_scaled)[0]
         prob_class_labels = label_encoder.inverse_transform(knn.classes_)
         prob_dict = {}
@@ -306,79 +222,165 @@ def upload_image():
                 cls.replace("Diseased", "Unhealthy") if "Diseased" in cls else cls
             )
             prob_dict[cls_name] = int(round(prob * 100))
-
-        # Generate Explanation
         explanation = generate_explanation(prob_dict, pred_label)
-
-        print(f"Image uploaded: {unique_filename} -> {pred_label} | {prob_dict}")
-
-        return jsonify(
-            {
-                "success": True,
-                "prediction": pred_label,
-                "probabilities": prob_dict,
-                "explanation": explanation,
-                "filename": unique_filename,  # Return the unique name
-            }
-        )
-
+        recommendation = get_recommendation(pred_label)
+        return {
+            "success": True,
+            "prediction": pred_label,
+            "probabilities": prob_dict,
+            "explanation": explanation,
+            "recommendation": recommendation,
+            "filename": unique_filename,
+        }
     except Exception as e:
-        print(f"Error processing image: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-    # No finally block -> Image persists
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
-@app.route("/upload/cnn", methods=["POST"])
-def upload_cnn():
-    if "image" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-
-    file = request.files["image"]
-    if not file.filename:
-        return jsonify({"error": "No file selected"}), 400
-
-    ext = os.path.splitext(secure_filename(file.filename))[1].lower() or ".jpg"
+@app.post("/upload/cnn")
+async def upload_cnn(image: UploadFile = File(...)):
+    filename = image.filename or "image.jpg"
+    ext = os.path.splitext(secure_filename(filename))[1].lower() or ".jpg"
     if ext not in ALLOWED_EXTS:
-        return jsonify({"error": f"Unsupported file type: {ext}"}), 400
-
+        return JSONResponse({"error": f"Unsupported file type: {ext}"}, status_code=400)
     try:
         unique_filename = f"{uuid.uuid4().hex}{ext}"
-        file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_filename)
-        file.save(file_path)
-
+        file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+        contents = await image.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        file_path, ext = _ensure_compat_format(file_path, ext)
+        unique_filename = os.path.basename(file_path)
         result = cnn_predict_safe(cnn_model, file_path)
-
         prediction = result["prediction"]
         prob_dict = result["probabilities"]
         confidence = result["confidence"]
-
         explanation_text = (
             f"The CNN model is {confidence}% confident this is {prediction}. "
             f"Probabilities: {', '.join(f'{k}: {v}%' for k, v in prob_dict.items())}"
         )
-
-        print(f"CNN Image uploaded: {unique_filename} -> {prediction} | {prob_dict}")
-
-        return jsonify(
-            {
-                "success": True,
-                "prediction": prediction,
-                "confidence": confidence,
-                "probabilities": prob_dict,
-                "explanation": explanation_text,
-                "filename": unique_filename,
-            }
-        )
-
+        recommendation = get_recommendation(prediction)
+        return {
+            "success": True,
+            "prediction": prediction,
+            "confidence": confidence,
+            "probabilities": prob_dict,
+            "explanation": explanation_text,
+            "recommendation": recommendation,
+            "filename": unique_filename,
+        }
     except Exception as e:
-        print(f"CNN Error processing image: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
-@app.route("/feedback", methods=["POST"])
-def save_feedback():
+@app.get("/metrics")
+def model_metrics():
+    return render_template("model_metrics.html")
+
+
+def _metrics_dir():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+
+
+@app.get("/api/cnn-metrics")
+def api_cnn_metrics():
+    metrics_path = os.path.join(_metrics_dir(), "cnn_metrics.json")
+    if not os.path.exists(metrics_path):
+        return JSONResponse(
+            {"success": False, "error": "Metrics not found."}, status_code=404
+        )
+    with open(metrics_path) as f:
+        data = json.load(f)
+    return {"success": True, "data": data}
+
+
+@app.get("/api/cnn-metrics-image")
+def api_cnn_metrics_image():
+    img_path = os.path.join(_metrics_dir(), "cnn_metrics.jpg")
+    if not os.path.exists(img_path):
+        return JSONResponse(
+            {"success": False, "error": "CNN metrics image not found."}, status_code=404
+        )
+    return FileResponse(img_path, media_type="image/jpeg")
+
+
+@app.get("/api/knn-metrics")
+def api_knn_metrics():
+    metrics_path = os.path.join(_metrics_dir(), "knn_metrics.json")
+    if not os.path.exists(metrics_path):
+        return JSONResponse(
+            {"success": False, "error": "KNN metrics not found."}, status_code=404
+        )
+    with open(metrics_path) as f:
+        data = json.load(f)
+    return {"success": True, "data": data}
+
+
+@app.get("/api/knn-metrics-image")
+def api_knn_metrics_image():
+    img_path = os.path.join(_metrics_dir(), "knn_metrics.jpg")
+    if not os.path.exists(img_path):
+        return JSONResponse(
+            {"success": False, "error": "KNN metrics image not found."}, status_code=404
+        )
+    return FileResponse(img_path, media_type="image/jpeg")
+
+
+@app.get("/api/compare-metrics")
+def api_compare_metrics():
+    cnn_path = os.path.join(_metrics_dir(), "cnn_metrics.json")
+    knn_path = os.path.join(_metrics_dir(), "knn_metrics.json")
+    result = {"cnn": None, "knn": None}
+    if os.path.exists(cnn_path):
+        with open(cnn_path) as f:
+            data = json.load(f)
+            result["cnn"] = {
+                "accuracy": data.get("val_accuracy", 0),
+                "report": data.get("classification_report", {}),
+                "class_names": data.get("class_names", []),
+            }
+    if os.path.exists(knn_path):
+        with open(knn_path) as f:
+            data = json.load(f)
+            result["knn"] = {
+                "accuracy": data.get("val_accuracy", 0),
+                "report": data.get("classification_report", {}),
+                "class_names": data.get("class_names", []),
+            }
+    return result
+
+
+@app.get("/api/test-image/{folder}/{filename}")
+def api_test_image(folder: str, filename: str):
+    test_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "dataset", "test_data"
+    )
+    folder = os.path.basename(folder)
+    filename = os.path.basename(filename)
+    img_path = os.path.join(test_dir, folder, filename)
+    if not os.path.exists(img_path):
+        return JSONResponse(
+            {"success": False, "error": "Image not found."}, status_code=404
+        )
+    return FileResponse(img_path)
+
+
+@app.get("/api/compare-results")
+def api_compare_results():
+    results_path = os.path.join(_metrics_dir(), "comparison_results.json")
+    if not os.path.exists(results_path):
+        return JSONResponse(
+            {"success": False, "error": "Comparison results not found."},
+            status_code=404,
+        )
+    with open(results_path) as f:
+        data = json.load(f)
+    return {"success": True, "data": data}
+
+
+@app.post("/feedback")
+async def save_feedback(request: Request):
     try:
-        data = request.json
+        data = await request.json()
         filename = data.get("filename", "unknown")
         prediction = data.get("prediction", "unknown")
         is_correct = data.get("correct", False)
@@ -388,66 +390,32 @@ def save_feedback():
             actual_label = prediction
         elif not actual_label:
             actual_label = "Unknown"
-
-        if FIREBASE_AVAILABLE:
-            if filename in FEATURE_CACHE:
-                features = FEATURE_CACHE[filename]
-                label_map = {
-                    "Healthy Leaf": "Healthy Leaf",
-                    "Unhealthy Leaf": "Unhealthy leaf",
-                    "Non-Leaf": "None-leaf",
-                }
-                save_feature_to_firestore(
-                    features, label_map.get(actual_label, actual_label), filename
-                )
-                del FEATURE_CACHE[filename]
-            save_feedback_to_firestore(filename, prediction, is_correct, actual_label)
-        else:
-            save_feedback_local(
-                filename, prediction, is_correct, actual_label, model_type
-            )
-
-        return jsonify({"success": True})
+        save_feedback_local(filename, prediction, is_correct, actual_label, model_type)
+        return {"success": True}
     except Exception as e:
-        print(e)
-        return jsonify({"success": False, "error": str(e)}), 500
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
-@app.route("/api/analytics")
+@app.get("/api/analytics")
 def analytics_api():
     try:
-        if FIREBASE_AVAILABLE:
-            data = get_analytics_data(limit=1000)
-        else:
-            data = get_analytics_data_local(limit=1000)
-        return jsonify({"success": True, "data": data})
+        data = get_analytics_data_local(limit=1000)
+        return {"success": True, "data": data}
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
-@app.route("/history", methods=["GET"])
+@app.get("/history")
 def get_history_route():
-    if FIREBASE_AVAILABLE:
-        history = get_feedback_history()
-    else:
-        history = get_feedback_history_local()
-    return jsonify(history)
+    history = get_feedback_history_local()
+    return history
 
 
-@app.route("/clear_history", methods=["POST"])
+@app.post("/clear_history")
 def clear_history():
     try:
-        # Just open in write mode to truncate
-        with open(FEEDBACK_FILE, "w") as f:
-            f.write(
-                "timestamp,filename,prediction,is_correct,actual_label\n"
-            )  # Keep header
-        return jsonify({"success": True})
+        with open("feedback_local.json", "w") as f:
+            json.dump([], f)
+        return {"success": True}
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-    app.run(host="0.0.0.0", port=port, debug=debug)
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)

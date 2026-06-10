@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Banana Leaf Disease Detector | Scanner</title>
-  <link rel="icon" href="/static/favicon.png" type="image/png">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
@@ -16,10 +16,14 @@
 <body>
 
   <!-- TOP NAV -->
-  <nav class="navbar">
+  <nav class="navbar" style="display:flex;gap:1rem;">
     <a href="/" class="navbar__link">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-      Back to Home
+      Home
+    </a>
+    <a href="/metrics" class="navbar__link" style="margin-left:auto;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Model Metrics
     </a>
   </nav>
 
@@ -58,7 +62,7 @@
               <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </div>
             <p class="upload-zone__text">Click to upload or drag and drop</p>
-            <p class="upload-zone__subtext">Supports: JPG, PNG, WEBP</p>
+            <p class="upload-zone__subtext">Supports: JPG, PNG, WEBP &middot; Ctrl+V to paste</p>
           </div>
           <!-- IMPORTANT: name="image" to match app.py -->
           <input type="file" id="imageInput" class="upload-input" name="image" accept="image/*">
@@ -135,7 +139,7 @@
               <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </div>
             <p class="upload-zone__text">Click to upload or drag and drop</p>
-            <p class="upload-zone__subtext">Supports: JPG, PNG, WEBP</p>
+            <p class="upload-zone__subtext">Supports: JPG, PNG, WEBP &middot; Ctrl+V to paste</p>
           </div>
           <input type="file" id="cnnImageInput" class="upload-input" name="image" accept="image/*">
           
@@ -283,6 +287,30 @@
       document.getElementById(`tab-${model}`).classList.add('tab-content--active');
     }
 
+    // --- PASTE SUPPORT ---
+    document.addEventListener('paste', (e) => {
+      const items = e.clipboardData.items;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          const ext = file.type.split('/')[1] || 'png';
+          const pastedFile = new File([file], `pasted_image.${ext}`, { type: file.type });
+          const dt = new DataTransfer();
+          dt.items.add(pastedFile);
+          const activeTab = document.querySelector('.tab-content--active');
+          if (activeTab && activeTab.id === 'tab-cnn') {
+            cnnImageInput.files = dt.files;
+            cnnHandleFiles(dt.files);
+          } else {
+            imageInput.files = dt.files;
+            handleFiles(dt.files);
+          }
+          break;
+        }
+      }
+    });
+
     // --- CNN UPLOAD HANDLING ---
     const cnnUploadForm = document.getElementById('cnnUploadForm');
     const cnnImageInput = document.getElementById('cnnImageInput');
@@ -373,6 +401,7 @@
         if (data.success) {
           cnnCurrentFilename = data.filename;
           cnnDisplayResult(data);
+          loadAnalytics();
         } else {
           cnnOutput.innerHTML = `<div class="result-item" style="color:red">Error: ${data.error}</div>`;
         }
@@ -413,6 +442,24 @@
           <p style="font-weight: 600;">Confidence: ${maxProb}%</p>
           ${othersHtml}
           ${data.explanation ? `<div style="margin-top:1rem; padding:1rem; background:rgba(255,255,255,0.5); border-radius:8px;"><small>${data.explanation}</small></div>` : ''}
+          ${data.recommendation ? renderRecommendation(data.recommendation) : ''}
+          <!-- FEEDBACK SECTION -->
+          <div class="feedback-box">
+            <p class="feedback-box__title">Was this correct?</p>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn--primary feedback-btn" style="flex: 1" onclick="sendFeedback(true)">👍 Yes</button>
+              <button class="btn btn--secondary feedback-btn" style="flex: 1" onclick="showCorrectionUI()">👎 No</button>
+            </div>
+            <div id="correctionUI" style="display:none; margin-top: 1rem;">
+              <p style="margin-bottom: 0.5rem;">Please select correct label:</p>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="btn btn--secondary" onclick="submitCorrection('Healthy Leaf')">Healthy</button>
+                <button class="btn btn--secondary" onclick="submitCorrection('Unhealthy leaf')">Unhealthy</button>
+                <button class="btn btn--secondary" onclick="submitCorrection('Non-Leaf')">Non-Leaf</button>
+              </div>
+            </div>
+            <p id="feedbackMessage" style="margin-top:10px; font-weight:bold;"></p>
+          </div>
         </div>`;
 
       cnnOutput.innerHTML = html;
@@ -537,6 +584,7 @@
         if (data.success) {
           currentServerFilename = data.filename;
           displayResult(data);
+          loadAnalytics();
         } else {
           output.innerHTML = `<div class="result-item" style="color:red">Error: ${data.error}</div>`;
         }
@@ -578,6 +626,7 @@
                     <p style="font-weight: 600;">Confidence: ${maxProb}%</p>
                     ${othersHtml}
                     ${data.explanation ? `<div style="margin-top:1rem; padding:1rem; background:rgba(255,255,255,0.5); border-radius:8px;"><small>${data.explanation}</small></div>` : ''}
+                    ${data.recommendation ? renderRecommendation(data.recommendation) : ''}
                     
                     <!-- FEEDBACK SECTION -->
                     <div class="feedback-box">
@@ -601,7 +650,32 @@
       output.innerHTML = html;
     }
 
-    // GLOBAL FEEDBACK FUNCTIONS (Attached to window for inline onclick)
+    // GLOBAL FEEDBACK FUNCTIONS
+    function renderRecommendation(rec) {
+      const colorMap = {
+        'Healthy Leaf': 'var(--md-sys-color-success)',
+        'Unhealthy Leaf': 'var(--md-sys-color-error)',
+        'Non-Leaf': 'var(--md-sys-color-on-surface-variant)',
+      };
+      const iconMap = {
+        'Healthy Leaf': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+        'Unhealthy Leaf': '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86l-8 14A1 1 0 0 0 3 19h18a1 1 0 0 0 .86-1.49l-8-14a1 1 0 0 0-1.72 0z"/>',
+        'Non-Leaf': '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+      };
+      const borderColor = colorMap[rec.title] || 'var(--md-sys-color-warning)';
+      const iconPath = iconMap[rec.title] || iconMap['Non-Leaf'];
+      const items = rec.actions.map(a => `<li style="margin-bottom:0.4rem; line-height:1.4;">${a}</li>`).join('');
+      return `
+        <div style="margin-top:1.5rem; padding:1.5rem; border-left: 4px solid ${borderColor}; border-radius:12px; background:rgba(255,255,255,0.6);">
+          <h4 style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem; font-size:1.1rem;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${borderColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconPath}</svg>
+            ${rec.title}
+          </h4>
+          <p style="margin-bottom:0.75rem; opacity:0.9; font-size:0.95rem;">${rec.advice}</p>
+          <ul style="margin:0; padding-left:1.25rem; font-size:0.9rem;">${items}</ul>
+        </div>`;
+    }
+
     window.sendFeedback = function (isCorrect) {
       submitFeedbackPaylod(isCorrect, null);
     };
@@ -615,7 +689,10 @@
     };
 
     async function submitFeedbackPaylod(isCorrect, actualLabel) {
-      if (!currentServerFilename) return;
+      const activeTab = document.querySelector('.tab-content--active');
+      const isCnn = activeTab && activeTab.id === 'tab-cnn';
+      const filename = isCnn ? cnnCurrentFilename : currentServerFilename;
+      if (!filename) return;
       const msgEl = document.getElementById('feedbackMessage');
       msgEl.innerText = "Submitting feedback...";
 
@@ -624,10 +701,11 @@
 
       try {
         const payload = {
-          filename: currentServerFilename,
+          filename: filename,
           prediction: currentPred,
           correct: isCorrect,
-          actual_label: actualLabel
+          actual_label: actualLabel,
+          model_type: isCnn ? 'cnn' : 'knn'
         };
 
         const res = await fetch('/feedback', {
@@ -646,6 +724,8 @@
 
           // Reload History
           setTimeout(loadHistory, 1000);
+          // Reload Analytics
+          setTimeout(loadAnalytics, 1000);
 
         } else {
           msgEl.innerText = "Error: " + data.error;

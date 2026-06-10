@@ -2,6 +2,7 @@ import os
 import torch
 import torch.nn as nn
 from torchvision import models
+from tqdm import tqdm
 from .model import create_model
 
 
@@ -26,7 +27,9 @@ def train(model, train_loader, val_loader, epochs=15, lr=0.001, device=None):
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
-        for images, labels in train_loader:
+        for images, labels in tqdm(
+            train_loader, desc=f"Epoch {epoch + 1}/{epochs} [Train]", leave=False
+        ):
             images, labels = images.to(device), labels.to(device)
 
             optimizer.zero_grad()
@@ -44,7 +47,9 @@ def train(model, train_loader, val_loader, epochs=15, lr=0.001, device=None):
         correct = 0
         total = 0
         with torch.no_grad():
-            for images, labels in val_loader:
+            for images, labels in tqdm(
+                val_loader, desc=f"Epoch {epoch + 1}/{epochs} [Val]", leave=False
+            ):
                 images, labels = images.to(device), labels.to(device)
                 outputs = model(images)
                 loss = criterion(outputs, labels)

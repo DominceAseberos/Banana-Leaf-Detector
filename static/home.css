@@ -290,15 +290,33 @@ body.scrollytelling-body {
   background: #000;
 }
 
-.scanner-demo__img {
+.scanner-demo__viewport {
+  position: relative;
   width: 100%;
-  display: block;
-  opacity: 0.8;
+  aspect-ratio: 4 / 3;
+  background: #0a1a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scanner-demo__leaf-svg {
+  position: absolute;
+  width: 85%;
+  height: 85%;
+  top: 7.5%;
+  left: 7.5%;
+  z-index: 3;
+  animation: leaf-breathe 4s ease-in-out infinite;
+}
+
+@keyframes leaf-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.02); opacity: 1; }
 }
 
 .scanner-demo__laser {
   position: absolute;
-  top: 0;
   left: 0;
   width: 100%;
   height: 2px;
@@ -314,9 +332,85 @@ body.scrollytelling-body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(to bottom, rgba(0, 255, 0, 0.2) 0%, transparent 10%);
+  background: linear-gradient(to bottom, rgba(0, 255, 0, 0.15) 0%, transparent 10%);
   animation: scan-overlay 3s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
   pointer-events: none;
+  z-index: 5;
+}
+
+/* Viewfinder corners */
+.scanner-demo__corners {
+  position: absolute;
+  inset: 8px;
+  z-index: 8;
+  pointer-events: none;
+  border: 1px solid rgba(0, 255, 0, 0.15);
+  border-radius: 4px;
+}
+
+.scanner-demo__corners::before,
+.scanner-demo__corners::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: rgba(0, 255, 0, 0.6);
+  border-style: solid;
+  border-width: 0;
+}
+
+.scanner-demo__corners::before {
+  top: -1px;
+  left: -1px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.scanner-demo__corners::after {
+  top: -1px;
+  right: -1px;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+
+.scanner-demo__corners span:first-of-type {
+  position: absolute;
+  bottom: -1px;
+  left: -1px;
+  width: 18px;
+  height: 18px;
+  border-bottom: 2px solid rgba(0, 255, 0, 0.6);
+  border-left: 2px solid rgba(0, 255, 0, 0.6);
+}
+
+.scanner-demo__corners span:last-of-type {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 18px;
+  height: 18px;
+  border-bottom: 2px solid rgba(0, 255, 0, 0.6);
+  border-right: 2px solid rgba(0, 255, 0, 0.6);
+}
+
+.scanner-demo__viewfinder-text {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: rgba(0, 255, 0, 0.7);
+  text-shadow: 0 0 10px rgba(0,255,0,0.3);
+  pointer-events: none;
+  animation: blink-text 2s ease-in-out infinite;
+}
+
+@keyframes blink-text {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 0.3; }
 }
 
 /* Simulated AI detection boxes */
@@ -325,10 +419,10 @@ body.scrollytelling-body {
   border: 2px solid rgba(0, 255, 0, 0);
   border-radius: 4px;
   animation: pulse-box 6s infinite;
+  z-index: 9;
 }
 
 .scanner-demo__box::after {
-  content: "Detected";
   position: absolute;
   top: -20px;
   left: -2px;
@@ -340,21 +434,24 @@ body.scrollytelling-body {
   border-radius: 2px;
   opacity: 0;
   animation: fade-text 6s infinite;
+  white-space: nowrap;
 }
 
-.scanner-demo__box--1 { top: 30%; left: 40%; width: 50px; height: 50px; animation-delay: 0.5s; }
+.scanner-demo__box--1 { top: 30%; left: 42%; width: 50px; height: 45px; animation-delay: 0.5s; }
 .scanner-demo__box--1::after { content: "98% Healthy"; animation-delay: 0.5s; }
-.scanner-demo__box--2 { top: 60%; left: 30%; width: 40px; height: 60px; animation-delay: 1.5s; }
-.scanner-demo__box--2::after { content: "Analyzing"; animation-delay: 1.5s; }
+.scanner-demo__box--2 { top: 58%; left: 32%; width: 36px; height: 50px; animation-delay: 1.5s; }
+.scanner-demo__box--2::after { content: "Analyzing..."; animation-delay: 1.5s; }
+.scanner-demo__box--3 { top: 22%; left: 22%; width: 28px; height: 28px; animation-delay: 2.5s; }
+.scanner-demo__box--3::after { content: "Spot Detected"; animation-delay: 2.5s; }
 
 @keyframes scan {
   0% { top: 5%; }
-  100% { top: 95%; }
+  100% { top: 90%; }
 }
 
 @keyframes scan-overlay {
   0% { transform: translateY(5%); }
-  100% { transform: translateY(95%); }
+  100% { transform: translateY(90%); }
 }
 
 @keyframes pulse-box {
@@ -365,4 +462,57 @@ body.scrollytelling-body {
 @keyframes fade-text {
   0%, 100% { opacity: 0; }
   50% { opacity: 1; }
+}
+
+/* LEAF PATTERN OVERLAYS */
+.story-phase--hook::before,
+.story-phase--journey::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.12;
+}
+
+.story-phase--hook::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath d='M60 10C35 30 20 55 20 80c0 15 5 25 15 30s25 5 40-5c15-10 25-25 25-40 0-20-15-45-25-55s-10-5-15 0z' fill='none' stroke='%23b7f397' stroke-width='1.5' opacity='0.6'/%3E%3Cpath d='M65 20c-8 12-15 28-15 42 0 8 3 14 8 17s13 3 21-3c8-5 14-13 14-21 0-10-8-23-14-28s-5-3-8 0z' fill='none' stroke='%2385c862' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+.story-phase--journey::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M50 8c-21 18-33 40-33 60 0 11 4 19 11 23s19 4 30-4c11-7 19-19 19-30 0-15-11-34-19-41s-7-4-8 0z' fill='none' stroke='%236499e8' stroke-width='1.2' opacity='0.5'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
+}
+
+/* FLOATING LEAF ANIMATIONS */
+@keyframes float-leaf {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.4; }
+  100% { transform: translateY(-100vh) rotate(360deg) scale(0.5); opacity: 0; }
+}
+
+.leaf-particle {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.leaf-particle svg {
+  width: 100%;
+  height: 100%;
+}
+
+.leaf-particle--1 { bottom: -50px; left: 10%; animation: float-leaf 12s ease-in 0s infinite; width: 50px; height: 50px; }
+.leaf-particle--2 { bottom: -80px; left: 30%; animation: float-leaf 15s ease-in 2s infinite; width: 35px; height: 35px; }
+.leaf-particle--3 { bottom: -30px; left: 55%; animation: float-leaf 10s ease-in 4s infinite; width: 45px; height: 45px; }
+.leaf-particle--4 { bottom: -60px; left: 75%; animation: float-leaf 18s ease-in 1s infinite; width: 30px; height: 30px; }
+.leaf-particle--5 { bottom: -40px; left: 90%; animation: float-leaf 14s ease-in 3s infinite; width: 40px; height: 40px; }
+
+.story-phase--dark .leaf-particle svg path {
+  stroke: rgba(183, 243, 151, 0.15);
 }

@@ -1,0 +1,58 @@
+{
+  "val_accuracy": 0.8824833702882483,
+  "classification_report": {
+    "Unhealthy Leaf": {
+      "precision": 0.9194630872483222,
+      "recall": 0.9072847682119205,
+      "f1-score": 0.9133333333333333,
+      "support": 151.0
+    },
+    "Healthy Leaf": {
+      "precision": 0.9596774193548387,
+      "recall": 0.7933333333333333,
+      "f1-score": 0.8686131386861314,
+      "support": 150.0
+    },
+    "Non-Leaf": {
+      "precision": 0.797752808988764,
+      "recall": 0.9466666666666667,
+      "f1-score": 0.8658536585365854,
+      "support": 150.0
+    },
+    "accuracy": 0.8824833702882483,
+    "macro avg": {
+      "precision": 0.892297771863975,
+      "recall": 0.8824282560706402,
+      "f1-score": 0.8826000435186834,
+      "support": 451.0
+    },
+    "weighted avg": {
+      "precision": 0.8923580053792396,
+      "recall": 0.8824833702882483,
+      "f1-score": 0.8826681882854565,
+      "support": 451.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      142,
+      4,
+      4
+    ],
+    [
+      13,
+      137,
+      1
+    ],
+    [
+      23,
+      8,
+      119
+    ]
+  ],
+  "class_names": [
+    "Unhealthy Leaf",
+    "Healthy Leaf",
+    "Non-Leaf"
+  ]
+}

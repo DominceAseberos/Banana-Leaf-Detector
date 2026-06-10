@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Banana Leaf Disease Detector | Scrollytelling</title>
-  <link rel="icon" href="/static/favicon.png" type="image/png">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
@@ -57,21 +57,26 @@
   
   <nav class="navbar">
     <div class="navbar__logo">🍃 BananaAI</div>
-    <a href="/scanner" class="navbar__cta btn btn--nav">Launch Scanner</a>
+    <div style="display:flex;gap:0.5rem;">
+      <a href="/scanner" class="navbar__cta btn btn--nav">Launch Scanner</a>
+      <a href="/metrics" class="navbar__cta btn btn--nav">Model Metrics</a>
+    </div>
   </nav>
 
   <main class="story">
     <!-- PHASE 1: The Hook -->
-    <section class="story-phase story-phase--hook" id="phase-hook">
+    <section class="story-phase story-phase--hook" id="phase-hook" style="background: linear-gradient(135deg, #0d2818 0%, #1a4a2e 40%, #2d6b3f 100%);">
       <div class="story-phase__content">
         <h1 class="story-phase__title">The Future of <br><span class="story-phase__title--highlight">Banana Farming</span></h1>
         <p class="story-phase__text">Protect your crops with the power of artificial intelligence.</p>
         <p class="story-phase__scroll-indicator">↓ Scroll to explore</p>
       </div>
-      <div class="story-phase__bg">
-        <img src="/static/banana_leaf_macro_1779868242466.png" alt="Macro view of a vibrant banana leaf" class="story-phase__img">
-        <div class="story-phase__overlay"></div>
-      </div>
+      <!-- Floating leaf particles -->
+      <div class="leaf-particle leaf-particle--1"><svg viewBox="0 0 40 40"><path d="M20 4C10 12 4 24 4 32c0 5 2 9 5 11s9 2 15-2c5-3 9-9 9-15 0-7-5-17-9-21s-4-2-4 0z" fill="none" stroke="#b7f397" stroke-width="1.5" opacity="0.6"/></svg></div>
+      <div class="leaf-particle leaf-particle--2"><svg viewBox="0 0 40 40"><path d="M20 4C10 12 4 24 4 32c0 5 2 9 5 11s9 2 15-2c5-3 9-9 9-15 0-7-5-17-9-21s-4-2-4 0z" fill="none" stroke="#85c862" stroke-width="1.2" opacity="0.5"/></svg></div>
+      <div class="leaf-particle leaf-particle--3"><svg viewBox="0 0 40 40"><path d="M20 4C10 12 4 24 4 32c0 5 2 9 5 11s9 2 15-2c5-3 9-9 9-15 0-7-5-17-9-21s-4-2-4 0z" fill="none" stroke="#b7f397" stroke-width="1" opacity="0.4"/></svg></div>
+      <div class="leaf-particle leaf-particle--4"><svg viewBox="0 0 40 40"><path d="M20 4C10 12 4 24 4 32c0 5 2 9 5 11s9 2 15-2c5-3 9-9 9-15 0-7-5-17-9-21s-4-2-4 0z" fill="none" stroke="#85c862" stroke-width="1.5" opacity="0.45"/></svg></div>
+      <div class="leaf-particle leaf-particle--5"><svg viewBox="0 0 40 40"><path d="M20 4C10 12 4 24 4 32c0 5 2 9 5 11s9 2 15-2c5-3 9-9 9-15 0-7-5-17-9-21s-4-2-4 0z" fill="none" stroke="#b7f397" stroke-width="1.2" opacity="0.35"/></svg></div>
     </section>
 
     <!-- PHASE 2: Context -->
@@ -83,15 +88,13 @@
     </section>
 
     <!-- PHASE 3: The Journey -->
-    <section class="story-phase story-phase--journey" id="phase-journey">
+    <section class="story-phase story-phase--journey" id="phase-journey" style="background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 40%, #0d2818 100%);">
       <div class="story-phase__content">
         <h2 class="story-phase__title">How AI Solves It</h2>
         <p class="story-phase__text">By analyzing microscopic patterns, discoloration, and structural changes on the leaf surface, our advanced machine learning models can detect diseases before they become visible to the naked eye. We use a K-Nearest Neighbors classifier trained on hundreds of verified samples.</p>
       </div>
-      <div class="story-phase__bg">
-         <img src="/static/ai_analysis_visualization_1779868267351.png" alt="AI analyzing agricultural data on a leaf" class="story-phase__img">
-         <div class="story-phase__overlay"></div>
-      </div>
+      <div class="leaf-particle leaf-particle--1" style="opacity:0.3;"><svg viewBox="0 0 40 40"><path d="M20 4C10 12 4 24 4 32c0 5 2 9 5 11s9 2 15-2c5-3 9-9 9-15 0-7-5-17-9-21s-4-2-4 0z" fill="none" stroke="#6499e8" stroke-width="1.5" opacity="0.5"/></svg></div>
+      <div class="leaf-particle leaf-particle--3" style="opacity:0.25; left: 70%;"><svg viewBox="0 0 40 40"><path d="M20 4C10 12 4 24 4 32c0 5 2 9 5 11s9 2 15-2c5-3 9-9 9-15 0-7-5-17-9-21s-4-2-4 0z" fill="none" stroke="#7ab0ed" stroke-width="1.2" opacity="0.4"/></svg></div>
     </section>
 
     <!-- PHASE 4: The Climax -->
@@ -118,13 +121,89 @@
       <!-- Right Column: Animated Scanner Demo -->
       <div style="position: relative; z-index: 10;">
         <div class="scanner-demo">
-          <img src="/static/isolated_banana_leaf_1779875348341.png" alt="Banana Leaf Scanning Demo" class="scanner-demo__img">
-          <div class="scanner-demo__laser"></div>
-          <div class="scanner-demo__overlay"></div>
-          
-          <!-- Mock Detection Boxes -->
-          <div class="scanner-demo__box scanner-demo__box--1"></div>
-          <div class="scanner-demo__box scanner-demo__box--2"></div>
+          <div class="scanner-demo__viewport">
+            <svg class="scanner-demo__leaf-svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#4a8c2a"/>
+                  <stop offset="50%" stop-color="#2d6b1e"/>
+                  <stop offset="100%" stop-color="#1a4a12"/>
+                </linearGradient>
+                <linearGradient id="leafGrad2" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#5a9c3a"/>
+                  <stop offset="100%" stop-color="#3a7a22"/>
+                </linearGradient>
+                <filter id="leafShadow">
+                  <feDropShadow dx="2" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.4"/>
+                </filter>
+              </defs>
+              <!-- Stem / petiole -->
+              <path d="M200 280 Q198 260 196 240 Q194 225 193 215" stroke="#4a7a2a" stroke-width="6" fill="none" stroke-linecap="round"/>
+              <path d="M200 280 Q202 260 204 240 Q206 225 207 215" stroke="#5a8a3a" stroke-width="4" fill="none" stroke-linecap="round"/>
+              <!-- Main leaf blade — long, narrow, pointed banana leaf -->
+              <path d="M193 215 
+                       Q170 210 140 195 Q110 178 85 155 
+                       Q65 135 55 110 Q48 88 55 65 
+                       Q62 42 80 28 Q100 15 130 10 
+                       Q155 7 175 8 Q188 9 198 12 
+                       Q200 8 202 8 
+                       Q225 7 250 10 Q280 15 300 28 
+                       Q318 42 325 65 Q332 88 325 110 
+                       Q315 135 295 155 Q270 178 240 195 
+                       Q210 210 207 215 
+                       Q202 218 200 218 Q198 218 193 215Z"
+                    fill="url(#leafGrad)" filter="url(#leafShadow)" opacity="0.95"/>
+              <!-- Asymmetric half-tones for depth -->
+              <path d="M193 215 Q170 210 140 195 Q110 178 85 155 Q65 135 55 110 Q48 88 55 65 Q62 42 80 28 Q100 15 130 10 Q155 7 175 8 Q188 9 198 12 Q200 10 200 218Z"
+                    fill="rgba(255,255,255,0.06)"/>
+              <!-- Midrib — prominent central vein -->
+              <path d="M200 217 Q200 170 200 120 Q200 70 200 12"
+                    stroke="#7ab84a" stroke-width="3" fill="none" opacity="0.7"/>
+              <path d="M200 217 Q200 170 200 120 Q200 70 200 12"
+                    stroke="#5a983a" stroke-width="1.5" fill="none" opacity="0.4"/>
+              <!-- Lateral veins — left side (parallel, pinnate) -->
+              <path d="M200 200 Q180 195 155 185" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 190 Q178 183 148 170" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 178 Q175 168 140 152" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 165 Q172 153 132 135" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 150 Q170 137 125 115" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 135 Q168 120 120 95" stroke="#6aa840" stroke-width="1.1" fill="none" opacity="0.3"/>
+              <path d="M200 118 Q165 102 118 78" stroke="#6aa840" stroke-width="1.1" fill="none" opacity="0.3"/>
+              <path d="M200 100 Q165 85 125 62" stroke="#6aa840" stroke-width="1" fill="none" opacity="0.25"/>
+              <path d="M200 80 Q168 66 138 48" stroke="#6aa840" stroke-width="1" fill="none" opacity="0.25"/>
+              <path d="M200 60 Q172 48 152 35" stroke="#6aa840" stroke-width="0.9" fill="none" opacity="0.2"/>
+              <path d="M200 42 Q180 32 165 22" stroke="#6aa840" stroke-width="0.8" fill="none" opacity="0.2"/>
+              <!-- Lateral veins — right side -->
+              <path d="M200 200 Q220 195 245 185" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 190 Q222 183 252 170" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 178 Q225 168 260 152" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 165 Q228 153 268 135" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 150 Q230 137 275 115" stroke="#6aa840" stroke-width="1.2" fill="none" opacity="0.35"/>
+              <path d="M200 135 Q232 120 280 95" stroke="#6aa840" stroke-width="1.1" fill="none" opacity="0.3"/>
+              <path d="M200 118 Q235 102 282 78" stroke="#6aa840" stroke-width="1.1" fill="none" opacity="0.3"/>
+              <path d="M200 100 Q235 85 275 62" stroke="#6aa840" stroke-width="1" fill="none" opacity="0.25"/>
+              <path d="M200 80 Q232 66 262 48" stroke="#6aa840" stroke-width="1" fill="none" opacity="0.25"/>
+              <path d="M200 60 Q228 48 248 35" stroke="#6aa840" stroke-width="0.9" fill="none" opacity="0.2"/>
+              <path d="M200 42 Q220 32 235 22" stroke="#6aa840" stroke-width="0.8" fill="none" opacity="0.2"/>
+              <!-- Disease spots -->
+              <ellipse cx="148" cy="165" rx="10" ry="6" fill="#4a2a1a" opacity="0.35"/>
+              <ellipse cx="130" cy="140" rx="7" ry="5" fill="#3a2a1a" opacity="0.25"/>
+              <ellipse cx="260" cy="150" rx="9" ry="5" fill="#4a2a1a" opacity="0.3"/>
+              <ellipse cx="165" cy="118" rx="5" ry="3" fill="#3a2a1a" opacity="0.2"/>
+              <ellipse cx="240" cy="125" rx="6" ry="4" fill="#4a2a1a" opacity="0.25"/>
+              <!-- Edge curl / highlight on left side -->
+              <path d="M85 155 Q65 135 55 110 Q48 88 55 65"
+                    stroke="rgba(255,255,255,0.08)" stroke-width="3" fill="none"/>
+            </svg>
+            <div class="scanner-demo__laser"></div>
+            <div class="scanner-demo__overlay"></div>
+            <div class="scanner-demo__corners"><span></span><span></span></div>
+            <div class="scanner-demo__viewfinder-text">AI SCAN ACTIVE</div>
+            <!-- Mock Detection Boxes -->
+            <div class="scanner-demo__box scanner-demo__box--1"></div>
+            <div class="scanner-demo__box scanner-demo__box--2"></div>
+            <div class="scanner-demo__box scanner-demo__box--3"></div>
+          </div>
         </div>
       </div>
       

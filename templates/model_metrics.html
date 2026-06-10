@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banana Leaf Disease Detector | Model Metrics</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/scanner.css?v=2">
+  <style>
+    .metrics-layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .metrics-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .metrics-header__title {
+      font-size: 2rem;
+      font-weight: 800;
+    }
+    .metrics-header__subtitle {
+      color: var(--md-sys-color-on-surface-variant);
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+    }
+    .nav-tab {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--md-sys-color-outline, #74796d);
+      border-radius: 12px;
+      background: transparent;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--md-sys-color-on-surface-variant);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+    .nav-tab:hover { background: var(--md-sys-color-surface-variant); }
+    .nav-tab--active {
+      background: var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-primary);
+      border-color: var(--md-sys-color-primary);
+    }
+    .nav-tab--active:hover { opacity: 0.9; }
+    .tab-pane { display: none; }
+    .tab-pane--active { display: block; }
+    .metrics-card {
+      background: var(--md-sys-color-surface);
+      border-radius: 24px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      border: 1px solid var(--md-sys-color-surface-variant);
+    }
+    .metrics-card__title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .metrics-img { width: 100%; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: zoom-in; }
+    .metrics-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    .metrics-table th, .metrics-table td {
+      padding: 0.75rem 1rem;
+      text-align: center;
+      border-bottom: 1px solid var(--md-sys-color-surface-variant);
+    }
+    .metrics-table th {
+      font-weight: 700;
+      color: var(--md-sys-color-on-surface-variant);
+      background: var(--md-sys-color-surface-variant);
+    }
+    .metrics-table tbody tr:hover { background: rgba(0,0,0,0.02); }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .badge--healthy { background: #9ff7a6; color: #002107; }
+    .badge--unhealthy { background: #ffdad6; color: #410002; }
+    .badge--nonleaf { background: #dfe4d7; color: #43483e; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .summary-card {
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      padding: 1.5rem;
+      border-radius: 16px;
+      text-align: center;
+    }
+    .summary-card__value { font-size: 2.2rem; font-weight: 800; }
+    .summary-card__label { font-size: 0.9rem; opacity: 0.9; }
+    .loading { text-align: center; padding: 3rem; color: var(--md-sys-color-on-surface-variant); }
+    .lightbox {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      justify-content: center;
+      align-items: center;
+      cursor: zoom-out;
+    }
+    .lightbox--open { display: flex; }
+    .lightbox img { max-width: 95vw; max-height: 95vh; border-radius: 12px; box-shadow: 0 8px 40px rgba(0,0,0,0.5); }
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .compare-card {
+      background: var(--md-sys-color-surface-variant);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .compare-card__label { font-size: 0.85rem; opacity: 0.8; margin-bottom: 0.25rem; }
+    .compare-card__value { font-size: 1.8rem; font-weight: 800; }
+    .compare-card__value--cnn { color: var(--md-sys-color-primary); }
+    .compare-card__value--knn { color: #e67e22; }
+    .compare-card__value--winner { color: var(--md-sys-color-success); }
+    @media (max-width: 700px) {
+      .summary-grid, .compare-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="navbar" style="display:flex;gap:1rem;">
+    <a href="/" class="navbar__link">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Home
+    </a>
+    <a href="/scanner" class="navbar__link" style="margin-left:auto;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Scanner
+    </a>
+  </nav>
+
+  <main class="metrics-layout">
+    <header class="metrics-header">
+      <h1 class="metrics-header__title">Model Evaluation</h1>
+      <p class="metrics-header__subtitle">Side-by-side comparison of CNN (ResNet18) and KNN performance</p>
+    </header>
+
+    <div class="nav-tabs" id="modelTabs">
+      <button class="nav-tab nav-tab--active" data-tab="cnn">CNN (ResNet18)</button>
+      <button class="nav-tab" data-tab="knn">KNN</button>
+      <button class="nav-tab" data-tab="compare">Comparison</button>
+    </div>
+
+    <div class="loading" id="loading">Loading metrics...</div>
+
+    <div id="metricsContent" style="display:none;">
+
+      <!-- CNN TAB -->
+      <div class="tab-pane tab-pane--active" id="pane-cnn">
+        <div class="summary-grid" id="cnnSummary"></div>
+        <div class="metrics-card">
+          <h2 class="metrics-card__title">
+            <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Training Curves & Confusion Matrix
+          </h2>
+          <img class="metrics-img" src="/api/cnn-metrics-image" alt="CNN Metrics" onclick="openLightbox('/api/cnn-metrics-image')"
+               onerror="this.parentElement.innerHTML='<p style=\'opacity:0.6\'>CNN metrics image not found.</p>'">
+        </div>
+        <div id="cnnReportCard"></div>
+        <div id="cnnCMCard"></div>
+      </div>
+
+      <!-- KNN TAB -->
+      <div class="tab-pane" id="pane-knn">
+        <div class="summary-grid" id="knnSummary"></div>
+        <div class="metrics-card">
+          <h2 class="metrics-card__title">
+            <svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Confusion Matrix & Performance
+          </h2>
+          <img class="metrics-img" src="/api/knn-metrics-image" alt="KNN Metrics" onclick="openLightbox('/api/knn-metrics-image')"
+               onerror="this.parentElement.innerHTML='<p style=\'opacity:0.6\'>KNN metrics image not found. Run python -m core.knn.knn_evaluate first.</p>'">
+        </div>
+        <div id="knnReportCard"></div>
+        <div id="knnCMCard"></div>
+      </div>
+
+      <!-- COMPARISON TAB -->
+      <div class="tab-pane" id="pane-compare">
+        <div class="compare-grid" id="compareGrid"></div>
+        <div class="metrics-card">
+          <h2 class="metrics-card__title">
+            <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Per-Class Comparison
+          </h2>
+          <div style="overflow-x:auto;">
+            <table class="metrics-table" id="compareTable">
+              <thead>
+                <tr><th>Class</th><th>Metric</th><th>CNN</th><th>KNN</th><th>Better</th></tr>
+              </thead>
+              <tbody id="compareBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="metrics-card" id="disagreementCard">
+          <h2 class="metrics-card__title">
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Where Models Disagree
+          </h2>
+          <p style="opacity:0.7;margin-bottom:1.5rem;">Images where CNN and KNN made different predictions</p>
+          <div id="disagreementGallery" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <img id="lightboxImg" src="" alt="Full size">
+  </div>
+
+  <script>
+    // Tab switching
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('nav-tab--active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('tab-pane--active'));
+        btn.classList.add('nav-tab--active');
+        document.getElementById('pane-' + btn.dataset.tab).classList.add('tab-pane--active');
+      });
+    });
+
+    function openLightbox(src) {
+      document.getElementById('lightboxImg').src = src;
+      document.getElementById('lightbox').classList.add('lightbox--open');
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('lightbox--open');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    const classBadges = {
+      'Unhealthy Leaf': 'badge--unhealthy',
+      'Healthy Leaf': 'badge--healthy',
+      'Non-Leaf': 'badge--nonleaf',
+    };
+
+    function renderReportTable(report, classNames, containerId) {
+      const container = document.getElementById(containerId);
+      if (!report) { container.innerHTML = ''; return; }
+      let html = `
+        <div class="metrics-card">
+          <h2 class="metrics-card__title">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Classification Report
+          </h2>
+          <div style="overflow-x:auto;">
+            <table class="metrics-table">
+              <thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1-Score</th><th>Support</th></tr></thead>
+              <tbody>`;
+      for (const cls of classNames) {
+        const vals = report[cls];
+        if (!vals) continue;
+        const badge = classBadges[cls] || '';
+        html += `<tr><td><span class="badge ${badge}">${cls}</span></td>
+          <td>${(vals.precision * 100).toFixed(1)}%</td>
+          <td>${(vals.recall * 100).toFixed(1)}%</td>
+          <td>${(vals['f1-score'] * 100).toFixed(1)}%</td>
+          <td>${vals.support}</td></tr>`;
+      }
+      html += `</tbody></table></div></div>`;
+      container.innerHTML = html;
+    }
+
+    function renderCM(cm, classNames, containerId) {
+      const container = document.getElementById(containerId);
+      if (!cm) { container.innerHTML = ''; return; }
+      let html = `
+        <div class="metrics-card">
+          <h2 class="metrics-card__title">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            Confusion Matrix
+          </h2>
+          <div style="overflow-x:auto;">
+            <table class="metrics-table">
+              <thead><tr><th>True \\ Predicted</th>`;
+      for (const cls of classNames) html += `<th>${cls}</th>`;
+      html += `</tr></thead><tbody>`;
+      for (let i = 0; i < cm.length; i++) {
+        html += `<tr><td style="font-weight:600;text-align:left;"><span class="badge ${classBadges[classNames[i]] || ''}">${classNames[i]}</span></td>`;
+        for (let j = 0; j < cm[i].length; j++) {
+          const isDiag = i === j;
+          html += `<td style="font-weight:${isDiag ? '700' : '400'}; color:${isDiag ? 'var(--md-sys-color-success)' : 'var(--md-sys-color-on-surface-variant)'}">${cm[i][j]}</td>`;
+        }
+        html += `</tr>`;
+      }
+      html += `</tbody></table></div></div>`;
+      container.innerHTML = html;
+    }
+
+    function folderForLabel(label) {
+      if (label === 'Unhealthy Leaf') return 'Diseased_leaf';
+      if (label === 'Healthy Leaf') return 'Healthy_leaf';
+      return 'Non_leaf';
+    }
+
+    async function loadDisagreementGallery() {
+      try {
+        const res = await fetch('/api/compare-results').then(r => r.json());
+        if (!res.success) return;
+        const data = res.data;
+        const gallery = document.getElementById('disagreementGallery');
+        const card = document.getElementById('disagreementCard');
+        const disagreements = data.all_results.filter(r => r.cnn_correct !== r.knn_correct);
+        if (disagreements.length === 0) {
+          card.style.display = 'none';
+          return;
+        }
+        card.style.display = 'block';
+        gallery.innerHTML = disagreements.map(r => {
+          const folder = r.folder || folderForLabel(r.true_label);
+          const imgUrl = `/api/test-image/${folder}/${encodeURIComponent(r.filename)}`;
+          const winner = r.cnn_correct ? 'CNN' : 'KNN';
+          return `
+            <div style="background:var(--md-sys-color-surface-variant);border-radius:16px;padding:1rem;text-align:center;">
+              <img src="${imgUrl}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:0.75rem;" onerror="this.style.display='none'">
+              <div style="font-size:0.8rem;opacity:0.6;margin-bottom:0.25rem;">${r.true_label}</div>
+              <div style="display:flex;justify-content:center;gap:1rem;font-size:0.85rem;">
+                <span style="color:var(--md-sys-color-primary);font-weight:${r.cnn_correct ? '700' : '400'}">CNN: ${r.cnn_prediction}</span>
+                <span style="color:#e67e22;font-weight:${r.knn_correct ? '700' : '400'}">KNN: ${r.knn_prediction}</span>
+              </div>
+              <div style="margin-top:0.5rem;font-size:0.8rem;font-weight:700;color:var(--md-sys-color-success)">Winner: ${winner}</div>
+            </div>`;
+        }).join('');
+      } catch (e) {
+        console.error('Failed to load disagreement gallery:', e);
+      }
+    }
+
+    async function loadMetrics() {
+      try {
+        const [cnnRes, knnRes, compareRes] = await Promise.all([
+          fetch('/api/cnn-metrics').then(r => r.json()),
+          fetch('/api/knn-metrics').then(r => r.json()),
+          fetch('/api/compare-metrics').then(r => r.json()),
+        ]);
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('metricsContent').style.display = 'block';
+
+        // --- CNN ---
+        if (cnnRes.success) {
+          const d = cnnRes.data;
+          const acc = (d.val_accuracy * 100).toFixed(2);
+          const r = d.classification_report;
+          document.getElementById('cnnSummary').innerHTML = `
+            <div class="summary-card"><div class="summary-card__value">${acc}%</div><div class="summary-card__label">Validation Accuracy</div></div>
+            <div class="summary-card"><div class="summary-card__value">${(r['macro avg']['f1-score']*100).toFixed(1)}%</div><div class="summary-card__label">Macro Avg F1</div></div>
+            <div class="summary-card"><div class="summary-card__value">${(r['weighted avg']['f1-score']*100).toFixed(1)}%</div><div class="summary-card__label">Weighted Avg F1</div></div>
+          `;
+          renderReportTable(r, d.class_names, 'cnnReportCard');
+          renderCM(d.confusion_matrix, d.class_names, 'cnnCMCard');
+        } else {
+          document.getElementById('cnnSummary').innerHTML = '<p style="text-align:center;opacity:0.6">CNN metrics not available. Train on Colab first.</p>';
+        }
+
+        // --- KNN ---
+        if (knnRes.success) {
+          const d = knnRes.data;
+          const acc = (d.val_accuracy * 100).toFixed(2);
+          const r = d.classification_report;
+          document.getElementById('knnSummary').innerHTML = `
+            <div class="summary-card" style="background:#fdf0e6;color:#7f3f00;"><div class="summary-card__value">${acc}%</div><div class="summary-card__label">Test Accuracy</div></div>
+            <div class="summary-card" style="background:#fdf0e6;color:#7f3f00;"><div class="summary-card__value">${(r['macro avg']['f1-score']*100).toFixed(1)}%</div><div class="summary-card__label">Macro Avg F1</div></div>
+            <div class="summary-card" style="background:#fdf0e6;color:#7f3f00;"><div class="summary-card__value">${(r['weighted avg']['f1-score']*100).toFixed(1)}%</div><div class="summary-card__label">Weighted Avg F1</div></div>
+          `;
+          renderReportTable(r, d.class_names, 'knnReportCard');
+          renderCM(d.confusion_matrix, d.class_names, 'knnCMCard');
+        } else {
+          document.getElementById('knnSummary').innerHTML = '<p style="text-align:center;opacity:0.6">KNN metrics not available. Run python -m core.knn.knn_evaluate first.</p>';
+        }
+
+        // --- COMPARISON ---
+        const c = compareRes;
+        if (c.cnn || c.knn) {
+          const allClasses = ['Unhealthy Leaf', 'Healthy Leaf', 'Non-Leaf'];
+          const metrics = ['precision', 'recall', 'f1-score'];
+
+          // Summary cards
+          const cnnAcc = c.cnn ? (c.cnn.accuracy * 100).toFixed(2) : 'N/A';
+          const knnAcc = c.knn ? (c.knn.accuracy * 100).toFixed(2) : 'N/A';
+          const cnnMacro = c.cnn ? (c.cnn.report['macro avg']['f1-score']*100).toFixed(1) : 'N/A';
+          const knnMacro = c.knn ? (c.knn.report['macro avg']['f1-score']*100).toFixed(1) : 'N/A';
+
+          const accWinner = c.cnn && c.knn ? (c.cnn.accuracy > c.knn.accuracy ? 'CNN' : (c.knn.accuracy > c.cnn.accuracy ? 'KNN' : 'Tie')) : '—';
+
+          document.getElementById('compareGrid').innerHTML = `
+            <div class="compare-card">
+              <div class="compare-card__label">Accuracy</div>
+              <div class="compare-card__value compare-card__value--cnn">${cnnAcc}</div>
+              <div style="font-size:0.8rem;opacity:0.6">CNN</div>
+              <div class="compare-card__value compare-card__value--knn" style="margin-top:0.5rem">${knnAcc}</div>
+              <div style="font-size:0.8rem;opacity:0.6">KNN</div>
+              <div style="margin-top:0.5rem;font-weight:700;color:var(--md-sys-color-success)">Winner: ${accWinner}</div>
+            </div>
+            <div class="compare-card">
+              <div class="compare-card__label">Macro Avg F1</div>
+              <div class="compare-card__value compare-card__value--cnn">${cnnMacro}</div>
+              <div style="font-size:0.8rem;opacity:0.6">CNN</div>
+              <div class="compare-card__value compare-card__value--knn" style="margin-top:0.5rem">${knnMacro}</div>
+              <div style="font-size:0.8rem;opacity:0.6">KNN</div>
+            </div>
+            <div class="compare-card">
+              <div class="compare-card__label">Best For</div>
+              <div style="font-size:1rem;font-weight:700;color:var(--md-sys-color-primary);margin-top:0.5rem">High Accuracy</div>
+              <div style="font-size:0.85rem;opacity:0.8;margin-top:0.5rem">CNN excels with complex patterns</div>
+              <div style="font-size:1rem;font-weight:700;color:#e67e22;margin-top:0.5rem">Fast Training</div>
+              <div style="font-size:0.85rem;opacity:0.8">KNN trains in seconds</div>
+            </div>
+          `;
+
+          // Per-class comparison table
+          let cmpBody = '';
+          for (const cls of allClasses) {
+            for (const met of metrics) {
+              const cVal = c.cnn && c.cnn.report[cls] ? (c.cnn.report[cls][met] * 100).toFixed(1) : '—';
+              const kVal = c.knn && c.knn.report[cls] ? (c.knn.report[cls][met] * 100).toFixed(1) : '—';
+              let better = '—';
+              if (cVal !== '—' && kVal !== '—') {
+                const cNum = parseFloat(cVal), kNum = parseFloat(kVal);
+                better = cNum > kNum ? 'CNN' : (kNum > cNum ? 'KNN' : 'Tie');
+              }
+              const metLabel = met.charAt(0).toUpperCase() + met.slice(1);
+              const badge = classBadges[cls] || '';
+              cmpBody += `<tr>
+                <td><span class="badge ${badge}">${cls}</span></td>
+                <td>${metLabel}</td>
+                <td style="font-weight:600;color:var(--md-sys-color-primary)">${cVal}%</td>
+                <td style="font-weight:600;color:#e67e22">${kVal}%</td>
+                <td style="font-weight:700;color:${better === 'CNN' ? 'var(--md-sys-color-primary)' : better === 'KNN' ? '#e67e22' : 'var(--md-sys-color-on-surface-variant)'}">${better}</td>
+              </tr>`;
+            }
+          }
+          document.getElementById('compareBody').innerHTML = cmpBody;
+        }
+      } catch (e) {
+        document.getElementById('loading').innerHTML = '<p style="color:var(--md-sys-color-error)">Failed to load metrics.</p>';
+        console.error(e);
+      }
+    }
+
+    loadMetrics().then(() => loadDisagreementGallery());
+  </script>
+
+</body>
+</html>

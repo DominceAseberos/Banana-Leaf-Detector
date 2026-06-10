@@ -1,96 +1,63 @@
+---
+title: Banana Leaf Detector
+emoji: 🍌
+colorFrom: indigo
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # Banana Leaf Disease Detector
 
 A dual-model web application that detects **Healthy Leaf**, **Unhealthy Leaf**, and **Non-Leaf** images using both KNN and CNN (ResNet18) classifiers.
 
----
+- **Website:** [banana-leaf-detector.vercel.app](https://banana-leaf-detector.vercel.app)
+- **GitHub:** [github.com/Domincee/Banana-Leaf-Detector](https://github.com/Domincee/Banana-Leaf-Detector)
 
 ## Features
 
 ### Dual Model Architecture
-- **KNN Scanner** — Existing K-Nearest Neighbors classifier (59 features: GLCM, LBP, HOG, color histograms)
-- **CNN Scanner** — Deep learning classifier (ResNet18 transfer learning)
+- **KNN Scanner** — K-Nearest Neighbors classifier (59 features: GLCM, LBP, HOG, color histograms)
+- **CNN Scanner** — Deep learning classifier (ResNet18 transfer learning, ~95% validation accuracy)
+
+### Model Comparison Dashboard
+Per-class precision/recall/F1 comparison table with "Where Models Disagree" gallery showing test images where CNN and KNN differ.
 
 ### Active Learning
-- User feedback is logged locally (JSON) or to Firebase Firestore
-- Model improvement data collected for future retraining
-
-### Analytics Dashboard
-- Scan history with thumbnails
-- Disease distribution charts (Chart.js)
-- Accuracy tracking per model
-
----
+User feedback is logged locally for future retraining.
 
 ## Technology Stack
 
-- **Backend:** Python 3.12, Flask
-- **Database:** Firebase Firestore (optional) / Local JSON
+- **Backend:** Python 3.12, FastAPI, Uvicorn
 - **ML (KNN):** scikit-learn, NumPy, Pandas, OpenCV, scikit-image
 - **ML (CNN):** PyTorch, torchvision, ResNet18
-- **Frontend:** HTML5, CSS3, JavaScript, Chart.js
-- **Deployment:** Vercel / Render
-
----
+- **Frontend:** HTML5, CSS3, JavaScript
+- **Deployment:** Docker (HF Spaces)
 
 ## Project Structure
 
 ```
-Banana-Leaf-Detector/
-├── app.py                     # Flask application with dual routes
+├── app.py                     # FastAPI application
 ├── core/
-│   ├── knn/
-│   │   ├── extract_features.py   # 59-dim feature extraction
-│   │   ├── knn_trainer.py        # KNN training script
-│   │   └── __init__.py
-│   ├── cnn/
-│   │   ├── dataset_loader.py     # ImageFolder + transforms
-│   │   ├── model.py              # ResNet18 wrapper
-│   │   ├── cnn_trainer.py        # Training loop
-│   │   ├── cnn_inference.py      # Single-image prediction
-│   │   └── __init__.py
-│   ├── feedback_store.py         # Local JSON feedback storage
-│   └── __init__.py
-├── models/                   # Saved model files
-├── dataset/                  # Training & test images
-├── static/                   # CSS, JS, uploads
-├── templates/                # HTML views
-├── data.csv                  # KNN feature dataset
-└── requirements.txt          # Python dependencies
+│   ├── knn/                   # KNN feature extraction, training, evaluation
+│   ├── cnn/                   # CNN model, training, inference, evaluation
+│   └── compare_models.py      # CNN vs KNN comparison on test_data
+├── models/                    # Saved model files + metrics
+├── dataset/test_data/         # 39 test images (13 per class)
+├── static/                    # CSS, favicon
+├── templates/                 # HTML views (index, scanner, metrics)
+├── data.csv                   # KNN feature dataset (2878 samples)
+├── Dockerfile                 # HF Spaces deployment
+└── requirements.txt           # Python dependencies
 ```
 
----
+## Model Performance
 
-## Installation
-
-```bash
-git clone https://github.com/Domincee/Banana-Leaf-Detector.git
-cd Banana-Leaf-Detector
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python app.py
-```
-
-Open `http://127.0.0.1:5000` and navigate between the **KNN Scanner** and **CNN Scanner** tabs.
-
----
+| Metric | CNN (ResNet18) | KNN |
+|---|---|---|
+| Validation/Test Accuracy | 95.2% | 88.3% |
+| Test Data (39 images) | 100% | 74% |
 
 ## Training the CNN Model
 
-1. Download the training dataset from the [Google Drive link](https://drive.google.com/drive/folders/1mng06d0Y_U4hC7WM5hnbBNbuC5ohulcq)
-2. Extract to `dataset/train_data/` with folders: `Healthy Leaf/`, `Diseased leaf/`, `None-leaf/`
-3. Run the training script:
-   ```bash
-   python -m core.cnn.cnn_trainer
-   ```
-4. The trained model will be saved to `models/cnn_model.pth`
-
-## KNN Model Training
-
-```bash
-python -m core.knn.knn_trainer
-```
-
-## License
-
-© 2025 Domince Aseberos. MIT License.
+Use the Colab notebook (`colab_train_cnn.ipynb`) to train on GPU. Download the trained `.pth`, `.json`, and `.png` files to `models/`.
